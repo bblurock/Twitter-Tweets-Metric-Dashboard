@@ -1,27 +1,98 @@
 #!/usr/bin/env python
-#
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-import webapp2
-from google.appengine.api import urlfetch
-import json
-import logging
 
-class MainHandler(webapp2.RequestHandler):
+import webapp2
+from google.appengine.api import urlfetch, mail
+from google.appengine.ext import ndb
+import json
+import datetime
+import logging, traceback, os
+from bs4 import BeautifulSoup
+
+error_address = 'mike@tickleapp.com'
+sender_address = "Mike@Tickle <mike@tickleapp.com>"
+subject = "App Engine Exception for Tickle Dashboard"
+
+class BaseHandler(webapp2.RequestHandler):
+    def handle_exception(self, exception, debug_mode):
+        logging.info("handle_exception debug_mode = %s" % debug_mode)
+        if debug_mode:
+            webapp2.RequestHandler.handle_exception(self, exception, debug_mode)
+        else:
+            #logging.exception(exception)
+            #self.error(500)
+            #self.response.out.write('<pre>%s</pre>' % traceback.format_exc())
+            #self.response.out.write(template.render('templdir/error.html', {}))
+
+            body = "https://appengine.google.com/logs?app_id=s~tickle-dashboard\n\n%s" % traceback.format_exc()
+            mail.send_mail(sender_address, error_address, subject, body)
+            webapp2.RequestHandler.handle_exception(self, exception, debug_mode)
+
+
+class TwitterStats(ndb.Model):
+    username = ndb.StringProperty(required=True)
+    tweets = ndb.IntegerProperty(required=True)
+    following = ndb.IntegerProperty(required=True)
+    followers = ndb.IntegerProperty(required=True)
+    favorites = ndb.IntegerProperty(required=True)
+    created = ndb.DateTimeProperty(auto_now=True) # internal
+
+
+class ArchiveTwitterProfiles(webapp2.RequestHandler):
+    baseurl = 'https://twitter.com/'
+    users = ['tickleapp','_makewonder','spheroedu',
+             'gotynker','hopscotch', 'codehs', 'kodable',
+             'codeorg','scratchteam']
+
+    def toInt(self, str):
+        num = str.replace(',', '').lower()
+        if num.count('k') > 0:
+            num = float(num[:-1]) * 1000
+            #logging.info('converting %s => %i' % (str, num))
+        num = int(num)
+        return num
+
     def get(self):
-        self.response.write('Hello world!')
+        # check if we already have stats from today
+        last = TwitterStats.query(TwitterStats.username == 'tickleapp').order(-TwitterStats.created).get()
+        logging.info('%s: last stats = %s' % (datetime.datetime.now(), last))
+        delta = datetime.datetime.now() - last.created
+        # if within 23hrs, skip this run
+        if delta < datetime.timedelta(hours=23):
+            logging.info('delta = %s < 23hrs, skipping this run' % delta)
+            return
+        else:
+            logging.info('delta = %s > 23hrs, fetch Twitter stats' % delta)
+
+        stats = []
+        for user in self.users:
+            url = self.baseurl + user
+            result = urlfetch.fetch(url)
+            #logging.info(result)
+            if result.status_code == 200:
+                soup = BeautifulSoup(result.content)
+                tweets = self.toInt(soup.select('li.ProfileNav-item--tweets span.ProfileNav-value')[0].contents[0])
+                following = self.toInt(soup.select('li.ProfileNav-item--following span.ProfileNav-value')[0].contents[0])
+                followers = self.toInt(soup.select('li.ProfileNav-item--followers span.ProfileNav-value')[0].contents[0])
+                favorites = self.toInt(soup.select('li.ProfileNav-item--favorites span.ProfileNav-value')[0].contents[0])
+                #logging.info('%s = %s, %s, %s, %s' % (user, tweets, following, followers, favorites))
+                self.response.write('%s = %i, %i, %i, %i <br>' % (user, tweets, following, followers, favorites))
+                stats.append(TwitterStats(username = user,
+                                       tweets = tweets,
+                                    following = following,
+                                    followers = followers,
+                                    favorites = favorites))
+            else:
+                self.response.write('an error occurred fetching %s<br>' % url)
+        #logging.info("stats count = %s" % len(stats))
+        keys = ndb.put_multi(stats)
+        logging.info('saved Twitter stats: %s' % stats)
+        #query = TwitterStats.all()
+        #for q in query.run():
+        #    logging.info('%s: %s' % (q.username, q.followers))
+
+
+
+
 
 # fetches the iOS/Mac app review times from Kimono labs, and formats it for the Dash dashboard
 class iOSReviewAPI(webapp2.RequestHandler):
@@ -43,8 +114,24 @@ class AppleStore(webapp2.RequestHandler):
         result = urlfetch.fetch(url)
         self.response.write(result.status_code)
 
+
+
+
+class MainHandler(BaseHandler):
+    def get(self):
+        self.response.write('Hello world!')
+
+def isDevelopment():
+    if os.environ['SERVER_SOFTWARE'].startswith('Development'):
+        return True
+    else:
+        return False
+
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
+    #('/', ArchiveTwitterProfiles),
+    ('/archive-twitter', ArchiveTwitterProfiles),
     ('/ios-review', iOSReviewAPI),
     ('/apple-store', AppleStore),
-], debug=True)
+#], debug=False)
+], debug=isDevelopment())

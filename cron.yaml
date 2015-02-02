@@ -1,0 +1,4 @@
+cron:
+- description: daily Twitter stats
+  url: /archive-twitter
+  schedule: every 12 hours
