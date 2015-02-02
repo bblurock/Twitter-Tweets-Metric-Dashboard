@@ -34,7 +34,7 @@ class TwitterStats(ndb.Model):
     following = ndb.IntegerProperty(required=True)
     followers = ndb.IntegerProperty(required=True)
     favorites = ndb.IntegerProperty(required=True)
-    created = ndb.DateTimeProperty(auto_now=True) # internal
+    created = ndb.DateTimeProperty(auto_now_add=True) # internal
 
 
 class ArchiveTwitterProfiles(webapp2.RequestHandler):
@@ -52,16 +52,16 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
         return num
 
     def get(self):
+        now = datetime.datetime.now()
         # check if we already have stats from today
         last = TwitterStats.query(TwitterStats.username == 'tickleapp').order(-TwitterStats.created).get()
-        logging.info('%s: last stats = %s' % (datetime.datetime.now(), last))
-        delta = datetime.datetime.now() - last.created
-        # if within 23hrs, skip this run
-        if delta < datetime.timedelta(hours=23):
-            logging.info('delta = %s < 23hrs, skipping this run' % delta)
+        logging.info('%s: last stats = %s' % (now, last))
+        # if same date, skip this run
+        if last and now.date() == last.created.date():
+            logging.info('same day, skipping this run')
             return
         else:
-            logging.info('delta = %s > 23hrs, fetch Twitter stats' % delta)
+            logging.info('no data for today yet, fetch Twitter stats')
 
         stats = []
         for user in self.users:
