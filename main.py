@@ -119,7 +119,7 @@ class AppleStore(webapp2.RequestHandler):
 
 class MainHandler(BaseHandler):
     def get(self):
-        self.response.write('Hello world!')
+        self.response.write('Hello! %s' % self.request.headers)
 
 def isDevelopment():
     if os.environ['SERVER_SOFTWARE'].startswith('Development'):
