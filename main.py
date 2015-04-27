@@ -39,9 +39,16 @@ class TwitterStats(ndb.Model):
 
 class ArchiveTwitterProfiles(webapp2.RequestHandler):
     baseurl = 'https://twitter.com/'
-    users = ['tickleapp','_makewonder','spheroedu',
-             'gotynker','hopscotch', 'codehs', 'kodable',
-             'codeorg','scratchteam']
+    users = ['tickleapp',
+             'wonderworkshop',
+             'spheroedu',
+             'gotynker',
+             'hopscotch',
+             'codehs',
+             'kodable',
+             'codeorg',
+             'scratch',
+             'trinketapp']
 
     def toInt(self, str):
         num = str.replace(',', '').lower()
@@ -67,7 +74,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
         for user in self.users:
             url = self.baseurl + user
             result = urlfetch.fetch(url)
-            #logging.info(result)
+            logging.info('fetching: %s' % url)
             if result.status_code == 200:
                 soup = BeautifulSoup(result.content)
                 tweets = self.toInt(soup.select('li.ProfileNav-item--tweets span.ProfileNav-value')[0].contents[0])
