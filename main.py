@@ -7,6 +7,7 @@ import json
 import datetime
 import logging, traceback, os
 from bs4 import BeautifulSoup
+import gspread
 
 error_address = 'mike@tickleapp.com'
 sender_address = "Mike@Tickle <mike@tickleapp.com>"
@@ -49,7 +50,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
              'codeorg',
              'scratch',
              'trinketapp']
-
+	
     def toInt(self, str):
         num = str.replace(',', '').lower()
         if num.count('k') > 0:
@@ -57,49 +58,66 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             #logging.info('converting %s => %i' % (str, num))
         num = int(num)
         return num
-
-    def get(self):
+        
+    def retriveTwitterData(self, str):
+    
+    	users = GoogleSheets().users()
+    	logging.info('user %s' % (users))
+        user = str
         now = datetime.datetime.now()
-        # check if we already have stats from today
-        last = TwitterStats.query(TwitterStats.username == 'tickleapp').order(-TwitterStats.created).get()
+        # check if we already have data from today
+        last = TwitterStats.query(TwitterStats.username == user).order(-TwitterStats.created).get()
         logging.info('%s: last stats = %s' % (now, last))
         # if same date, skip this run
         if last and now.date() == last.created.date():
-            logging.info('same day, skipping this run')
+            logging.info('%s has data in same day, skipping this run' % (str))
             return
         else:
-            logging.info('no data for today yet, fetch Twitter stats')
-
-        stats = []
-        for user in self.users:
-            url = self.baseurl + user
-            result = urlfetch.fetch(url)
-            logging.info('fetching: %s' % url)
-            if result.status_code == 200:
-                soup = BeautifulSoup(result.content)
-                tweets = self.toInt(soup.select('li.ProfileNav-item--tweets span.ProfileNav-value')[0].contents[0])
-                following = self.toInt(soup.select('li.ProfileNav-item--following span.ProfileNav-value')[0].contents[0])
-                followers = self.toInt(soup.select('li.ProfileNav-item--followers span.ProfileNav-value')[0].contents[0])
-                favorites = self.toInt(soup.select('li.ProfileNav-item--favorites span.ProfileNav-value')[0].contents[0])
+            logging.info('no %s data for today yet, fetch Twitter stats' % user)
+        
+        url = self.baseurl + user
+        result = urlfetch.fetch(url)
+        logging.info('fetching: %s' % url)
+        if result.status_code == 200:
+            soup = BeautifulSoup(result.content)
+            tweets = self.toInt(soup.select('li.ProfileNav-item--tweets span.ProfileNav-value')[0].contents[0])
+            following = self.toInt(soup.select('li.ProfileNav-item--following span.ProfileNav-value')[0].contents[0])
+            followers = self.toInt(soup.select('li.ProfileNav-item--followers span.ProfileNav-value')[0].contents[0])
+            favorites = self.toInt(soup.select('li.ProfileNav-item--favorites span.ProfileNav-value')[0].contents[0])
                 #logging.info('%s = %s, %s, %s, %s' % (user, tweets, following, followers, favorites))
-                self.response.write('%s = %i, %i, %i, %i <br>' % (user, tweets, following, followers, favorites))
-                stats.append(TwitterStats(username = user,
-                                       tweets = tweets,
-                                    following = following,
-                                    followers = followers,
-                                    favorites = favorites))
-            else:
-                self.response.write('an error occurred fetching %s<br>' % url)
+            self.response.write('%s = %i, %i, %i, %i <br>' % (user, tweets, following, followers, favorites))
+            TwitterStats(username = user,
+                                        tweets = tweets,
+                                        following = following,
+                                        followers = followers,
+                                        favorites = favorites).put()
+        else:
+            self.response.write('an error occurred fetching %s<br>' % url)
+
+    def get(self):
+
+        for user in self.users:
+            self.retriveTwitterData(user)
         #logging.info("stats count = %s" % len(stats))
-        keys = ndb.put_multi(stats)
-        logging.info('saved Twitter stats: %s' % stats)
+        #logging.info('saved Twitter stats: %s' % stats)
         #query = TwitterStats.all()
         #for q in query.run():
         #    logging.info('%s: %s' % (q.username, q.followers))
 
 
 
-
+class GoogleSheets(webapp2.RequestHandler):
+	
+	baseSheet = '[Tickle]TwitterRawData'
+	
+	def users(self):
+		gc = gspread.login('travis@wantoto.com', '')
+		wks = gc.open('[Tickle]TwitterRawData').sheet1
+		cell_list = wks.row_values(1)
+		return cell_list
+		
+	def get(self):
+		logging.info("123")
 
 # fetches the iOS/Mac app review times from Kimono labs, and formats it for the Dash dashboard
 class iOSReviewAPI(webapp2.RequestHandler):
