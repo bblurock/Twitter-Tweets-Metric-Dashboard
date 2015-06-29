@@ -103,7 +103,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
         logging.info('%s: last stats = %s' % (now, last))
         # if same date, skip this run
         if last and now.date() == last.created.date():
-            logging.info('%s has data in same day, skipping this run' % (str))
+            self.response.write('has data in same day, skipping this run')
             return None
         else:
             logging.info('no %s data for today yet, fetch Twitter stats' % user)
