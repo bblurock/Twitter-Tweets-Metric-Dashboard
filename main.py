@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import webapp2
+from google.appengine.api import memcache
 from google.appengine.api import urlfetch, mail
 from google.appengine.ext import ndb
 
 from google.appengine.ext import webapp
+
 import json
 import datetime
 import logging, traceback, os
@@ -13,12 +15,14 @@ import gspread
 
 import argparse
 
-from apiclient.discovery import build
+# Add any libraries installed in the "lib" folder.
+from google.appengine.ext import vendor
+vendor.add('lib')
 import httplib2
 from oauth2client.file import Storage
 from oauth2client.appengine import AppAssertionCredentials
-
-
+from googleapiclient.discovery import build
+from oauth2client.client import SignedJwtAssertionCredentials
 
 error_address = 'mike@tickleapp.com'
 sender_address = "Mike@Tickle <mike@tickleapp.com>"
@@ -140,20 +144,18 @@ class GoogleSheets(webapp2.RequestHandler):
 class FetchGoogleAnalyticsData(webapp2.RequestHandler):
 
     def get(self):
+        
+        credentials = AppAssertionCredentials('https://www.googleapis.com/auth/analytics.readonly')
 
-		credentials = AppAssertionCredentials('https://www.googleapis.com/auth/analytics.readonly')
-
-		
-# 		client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
-# 		with open("tickle-dashboard-a18c59e8cbe0-notasecret.p12") as f: private_key = f.read()
-# 
-# 		credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
-		http = credentials.authorize(httplib2.Http())
-		scope = ['https://www.googleapis.com/auth/analytics.readonly']
+#        client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
+#        with open("tickle-dashboard-a18c59e8cbe0-notasecret.p12") as f: private_key = f.read()
+#
+#        credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
 
 
-		service = build('analytics', 'v3', http=http)
-		logging.info(service.data().ga().get(ids='ga:' + '3A93637703', start_date='7daysAgo', end_date='today', metrics='ga:sessions').execute())	
+        http = credentials.authorize(httplib2.Http(memcache))
+        service = build('analytics', 'v3', http=http)
+        logging.info(service.data().ga().get(ids='ga:' + '3A93637703', start_date='7daysAgo', end_date='today', metrics='ga:sessions').execute())
 
 
 
