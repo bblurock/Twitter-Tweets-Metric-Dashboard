@@ -3,11 +3,22 @@
 import webapp2
 from google.appengine.api import urlfetch, mail
 from google.appengine.ext import ndb
+
+from google.appengine.ext import webapp
 import json
 import datetime
 import logging, traceback, os
 from bs4 import BeautifulSoup
 import gspread
+
+import argparse
+
+from apiclient.discovery import build
+import httplib2
+from oauth2client.file import Storage
+from oauth2client.appengine import AppAssertionCredentials
+
+
 
 error_address = 'mike@tickleapp.com'
 sender_address = "Mike@Tickle <mike@tickleapp.com>"
@@ -39,6 +50,7 @@ class TwitterStats(ndb.Model):
 
 
 class ArchiveTwitterProfiles(webapp2.RequestHandler):
+    
     baseurl = 'https://twitter.com/'
     users = ['tickleapp',
              'wonderworkshop',
@@ -61,19 +73,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
         
     def retriveTwitterData(self, str):
     
-    	users = GoogleSheets().users()
-    	logging.info('user %s' % (users))
         user = str
-        now = datetime.datetime.now()
-        # check if we already have data from today
-        last = TwitterStats.query(TwitterStats.username == user).order(-TwitterStats.created).get()
-        logging.info('%s: last stats = %s' % (now, last))
-        # if same date, skip this run
-        if last and now.date() == last.created.date():
-            logging.info('%s has data in same day, skipping this run' % (str))
-            return
-        else:
-            logging.info('no %s data for today yet, fetch Twitter stats' % user)
         
         url = self.baseurl + user
         result = urlfetch.fetch(url)
@@ -86,20 +86,37 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             favorites = self.toInt(soup.select('li.ProfileNav-item--favorites span.ProfileNav-value')[0].contents[0])
                 #logging.info('%s = %s, %s, %s, %s' % (user, tweets, following, followers, favorites))
             self.response.write('%s = %i, %i, %i, %i <br>' % (user, tweets, following, followers, favorites))
-            TwitterStats(username = user,
-                                        tweets = tweets,
-                                        following = following,
-                                        followers = followers,
-                                        favorites = favorites).put()
+
+            return TwitterStats(username = user,
+                                tweets = tweets,
+                                following = following,
+                                followers = followers,
+                                favorites = favorites)
         else:
             self.response.write('an error occurred fetching %s<br>' % url)
 
     def get(self):
-
+        
+        now = datetime.datetime.now()
+        # check if we already have data from today
+        last = TwitterStats.query(TwitterStats.username == 'tickleapp').order(-TwitterStats.created).get()
+        logging.info('%s: last stats = %s' % (now, last))
+        # if same date, skip this run
+        if last and now.date() == last.created.date():
+            logging.info('%s has data in same day, skipping this run' % (str))
+            return None
+        else:
+            logging.info('no %s data for today yet, fetch Twitter stats' % user)
+        
+        stats = []
         for user in self.users:
-            self.retriveTwitterData(user)
-        #logging.info("stats count = %s" % len(stats))
-        #logging.info('saved Twitter stats: %s' % stats)
+            twitterStats = self.retriveTwitterData(user)
+            if twitterStats is not None:
+            	stats.append(twitterStats)
+            	
+    	#logging.info("stats count = %s" % len(stats))
+        keys = ndb.put_multi(stats)
+        logging.info('saved Twitter stats: %s' % stats)
         #query = TwitterStats.all()
         #for q in query.run():
         #    logging.info('%s: %s' % (q.username, q.followers))
@@ -111,13 +128,34 @@ class GoogleSheets(webapp2.RequestHandler):
 	baseSheet = '[Tickle]TwitterRawData'
 	
 	def users(self):
-		gc = gspread.login('travis@wantoto.com', '')
+		gc = gspread.login('', '')
 		wks = gc.open('[Tickle]TwitterRawData').sheet1
 		cell_list = wks.row_values(1)
 		return cell_list
 		
 	def get(self):
 		logging.info("123")
+
+
+class FetchGoogleAnalyticsData(webapp2.RequestHandler):
+
+    def get(self):
+
+		credentials = AppAssertionCredentials('https://www.googleapis.com/auth/analytics.readonly')
+
+		
+# 		client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
+# 		with open("tickle-dashboard-a18c59e8cbe0-notasecret.p12") as f: private_key = f.read()
+# 
+# 		credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
+		http = credentials.authorize(httplib2.Http())
+		scope = ['https://www.googleapis.com/auth/analytics.readonly']
+
+
+		service = build('analytics', 'v3', http=http)
+		logging.info(service.data().ga().get(ids='ga:' + '3A93637703', start_date='7daysAgo', end_date='today', metrics='ga:sessions').execute())	
+
+
 
 # fetches the iOS/Mac app review times from Kimono labs, and formats it for the Dash dashboard
 class iOSReviewAPI(webapp2.RequestHandler):
@@ -156,6 +194,7 @@ app = webapp2.WSGIApplication([
     ('/', MainHandler),
     #('/', ArchiveTwitterProfiles),
     ('/archive-twitter', ArchiveTwitterProfiles),
+    ('/google-analytic', FetchGoogleAnalyticsData),
     ('/ios-review', iOSReviewAPI),
     ('/apple-store', AppleStore),
 #], debug=False)
