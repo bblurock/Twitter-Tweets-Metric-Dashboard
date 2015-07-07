@@ -9,6 +9,8 @@ from google.appengine.ext import webapp
 
 import json
 import datetime
+from datetime import date
+from datetime import timedelta
 import logging, traceback, os
 from bs4 import BeautifulSoup
 import gspread
@@ -54,7 +56,7 @@ class TwitterStats(ndb.Model):
 
 
 class ArchiveTwitterProfiles(webapp2.RequestHandler):
-    
+
     baseurl = 'https://twitter.com/'
     users = ['tickleapp',
              'wonderworkshop',
@@ -66,7 +68,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
              'codeorg',
              'scratch',
              'trinketapp']
-	
+
     def toInt(self, str):
         num = str.replace(',', '').lower()
         if num.count('k') > 0:
@@ -74,11 +76,11 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             #logging.info('converting %s => %i' % (str, num))
         num = int(num)
         return num
-        
+
     def retriveTwitterData(self, str):
-    
+
         user = str
-        
+
         url = self.baseurl + user
         result = urlfetch.fetch(url)
         logging.info('fetching: %s' % url)
@@ -100,7 +102,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             self.response.write('an error occurred fetching %s<br>' % url)
 
     def get(self):
-        
+
         now = datetime.datetime.now()
         # check if we already have data from today
         last = TwitterStats.query(TwitterStats.username == 'tickleapp').order(-TwitterStats.created).get()
@@ -111,13 +113,13 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             return None
         else:
             logging.info('no %s data for today yet, fetch Twitter stats' % user)
-        
+
         stats = []
         for user in self.users:
             twitterStats = self.retriveTwitterData(user)
             if twitterStats is not None:
             	stats.append(twitterStats)
-            	
+
     	#logging.info("stats count = %s" % len(stats))
         keys = ndb.put_multi(stats)
         logging.info('saved Twitter stats: %s' % stats)
@@ -128,34 +130,55 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
 
 
 class GoogleSheets(webapp2.RequestHandler):
-	
+
 	baseSheet = '[Tickle]TwitterRawData'
-	
+
 	def users(self):
 		gc = gspread.login('', '')
 		wks = gc.open('[Tickle]TwitterRawData').sheet1
 		cell_list = wks.row_values(1)
 		return cell_list
-		
+
 	def get(self):
 		logging.info("123")
 
 
 class FetchGoogleAnalyticsData(webapp2.RequestHandler):
 
+    client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
+    with open("privatekey.pem") as f: private_key = f.read()
+    credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
+    http = credentials.authorize(httplib2.Http(memcache))
+    service = build('analytics', 'v3', http=http)
+    ids = 'ga:93637703'
+
     def get(self):
-        
-        credentials = AppAssertionCredentials('https://www.googleapis.com/auth/analytics.readonly')
+        #credentials = AppAssertionCredentials('https://www.googleapis.com/auth/analytics.readonly')
 
-#        client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
-#        with open("tickle-dashboard-a18c59e8cbe0-notasecret.p12") as f: private_key = f.read()
-#
-#        credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
+        self.response.write(self.getUser(interval = 7, end_date_str = '2015-07-05') + '<br>')
+        self.response.write(self.getUsers(start_date_iso = '2015-07-05', end_date_iso = '2015-07-05'))
+
+    def getUsers(self, start_date_iso, end_date_iso = 'today'):
+
+        self.response.write(start_date_iso + ' ' + end_date_iso + '<br>')
+        data = self.service.data().ga().get(ids=self.ids, start_date=start_date_iso, end_date=end_date_iso, metrics='ga:users').execute()
+
+        return data.get('rows')[0][0];
+
+    def getUser(self, interval, end_date_str = date.today().isoformat()):
+
+        end_date =  datetime.datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        # datedelta = timedelta(days = 1)
+        # end_date = end_date - datedelta
+        start_date = end_date
+        datedelta = timedelta(days = (interval - 1))
+        if interval > 0:
+            start_date = end_date - datedelta
+
+        return self.getUsers(start_date_iso = start_date.isoformat(), end_date_iso = end_date.isoformat())
 
 
-        http = credentials.authorize(httplib2.Http(memcache))
-        service = build('analytics', 'v3', http=http)
-        logging.info(service.data().ga().get(ids='ga:' + '3A93637703', start_date='7daysAgo', end_date='today', metrics='ga:sessions').execute())
+
 
 
 
