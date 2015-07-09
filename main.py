@@ -30,6 +30,8 @@ error_address = 'mike@tickleapp.com'
 sender_address = "Mike@Tickle <mike@tickleapp.com>"
 subject = "App Engine Exception for Tickle Dashboard"
 
+json_key = json.load(open('tickle-dashboard-9c4122612d83.json'))
+
 class BaseHandler(webapp2.RequestHandler):
     def handle_exception(self, exception, debug_mode):
         logging.info("handle_exception debug_mode = %s" % debug_mode)
@@ -131,23 +133,25 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
 
 class GoogleSheets(webapp2.RequestHandler):
 
-	baseSheet = '[Tickle]TwitterRawData'
+    baseSheetKey = '14eJTRW0lhLY7_EyNm_RfFnX0NB9zz_ORx6k_Ui1O3k0'
+    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], 'https://spreadsheets.google.com/feeds')
+    gc = gspread.authorize(credentials)
 
-	def users(self):
-		gc = gspread.login('', '')
-		wks = gc.open('[Tickle]TwitterRawData').sheet1
-		cell_list = wks.row_values(1)
-		return cell_list
+    def users(self):
 
-	def get(self):
-		logging.info("123")
+        wks = self.gc.open_by_key(self.baseSheetKey).sheet1
+        cell_list = wks.row_values(1)
+
+        return cell_list
+
+    def get(self):
+
+        self.response.write(self.users())
 
 
 class FetchGoogleAnalyticsData(webapp2.RequestHandler):
 
-    client_email = '1011546270873-4j7e4gmp21rpfpet651ts92nrsc38em4@developer.gserviceaccount.com'
-    with open("privatekey.pem") as f: private_key = f.read()
-    credentials = SignedJwtAssertionCredentials(client_email, private_key, 'https://www.googleapis.com/auth/analytics.readonly')
+    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], 'https://www.googleapis.com/auth/analytics.readonly')
     http = credentials.authorize(httplib2.Http(memcache))
     service = build('analytics', 'v3', http=http)
     ids = 'ga:93637703'
@@ -218,6 +222,7 @@ def isDevelopment():
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     #('/', ArchiveTwitterProfiles),
+    ('/google',  GoogleSheets),
     ('/archive-twitter', ArchiveTwitterProfiles),
     ('/google-analytic', FetchGoogleAnalyticsData),
     ('/ios-review', iOSReviewAPI),
