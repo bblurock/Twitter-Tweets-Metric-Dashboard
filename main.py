@@ -114,7 +114,7 @@ class ArchiveTwitterProfiles(webapp2.RequestHandler):
             self.response.write('has data in same day, skipping this run')
             return None
         else:
-            logging.info('no %s data for today yet, fetch Twitter stats' % user)
+            logging.info('no data for today yet, fetch Twitter stats')
 
         stats = []
         for user in self.users:
