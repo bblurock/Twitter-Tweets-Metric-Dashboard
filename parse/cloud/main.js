@@ -1,17 +1,19 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
+//var oauth = require("./libs/oauth.js");
 
-Parse.Cloud.job("twitterFeed", function (request, status) {
-
+Parse.Cloud.job("twitterFeed", function (request, response) {
+//Parse.Cloud.define('hello', function(request, response) {
     Parse.Cloud.useMasterKey();
 
     var that = this;
 
-    this.tableName = "user_status_dev";
-    this.trackingScreenNames = ['bblurock', 'tickleapp', 'wonderworkshop', 'spheroedu', 'gotynker', 'hopscotch', 'codehs', 'kodable', 'codeorg', 'scratch', 'trinketapp'];
+    this.tableName = "user_status";
+    this.trackingScreenNames = ['tickleapp', 'wonderworkshop', 'spheroedu', 'gotynker', 'hopscotch', 'codehs', 'kodable', 'codeorg', 'scratch', 'trinketapp'];
     this.trackingParseIDs = [];
+    this.countsPerBatch = 100;
 
-    // Read parameters from Parse.com 
+    // Read parameters from Parse.com
     var consumerSecret = request.params.consumerSecret;
     var oauth_consumer_key = request.params.oauth_consumer_key;
     var tokenSecret = request.params.tokenSecret;
@@ -36,12 +38,44 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
         oauth_signature_method: "HMAC-SHA1"
     };
 
+    var idStrDecrement = function(idStr){
+        var index = 1,
+            flag = true,
+            length = idStr.length;
+
+        function setCharAt(str, index, chr) {
+            if (index > str.length - 1) {
+                return str;
+            }
+
+            return str.substr(0, index) + chr + str.substr(index + 1);
+        }
+
+        while (flag) {
+            var i = length - index,
+                currentDigit = idStr[i];
+
+            currentDigit = parseInt(currentDigit) - 1;
+
+            if (currentDigit >= 0) {
+                flag = false;
+                idStr = setCharAt(idStr, i, currentDigit.toString());
+
+                continue;
+            }
+
+            idStr = setCharAt(idStr, i, "0");
+            index++;
+        }
+
+        return idStr;
+    };
 
     /**
      * @param  {array}         screenNames Containing the screen_name of desired Twitter account
      * @return {Parse.Promise}
      */
-    function lookupUsersInfo(screenNames) {
+    var lookupUsersInfo = function (screenNames) {
 
         // This promise is for the current method
         var promise = new Parse.Promise();
@@ -54,7 +88,7 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
         _.each(screenNames, function (screenName) {
             var queryPromise = new Parse.Promise();
 
-            // set today starting at 00:00:00 
+            // set today starting at 00:00:00
             var today = new Date();
             var userStatus = Parse.Object.extend(that.tableName);
             var query = new Parse.Query(userStatus);
@@ -113,7 +147,7 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                     success: function (httpResponse) {
                         var data = JSON.parse(httpResponse.text);
 
-                        var tweets = new Array();
+                        var lookupUsers = new Array();
 
                         for (var i = 0; i < data.length; i++) {
                             var usersClass = Parse.Object.extend(that.tableName),
@@ -165,23 +199,27 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
     /**
      * @return {Parse.Promise}
      */
-    function calculateTweetsInfoFromUsers() {
+    var calculateTweetsInfoFromUsers = function () {
 
         // This promise is for the current method
         var promise = new Parse.Promise();
 
+        var promisesCollection = [];
+
         _.each(this.trackingParseIDs, function (id) {
+
+            var loopingPromise = new Parse.Promise();
+            promisesCollection.push(loopingPromise);
+
             var userStatus = Parse.Object.extend(that.tableName);
             var userQuery = new Parse.Query(userStatus);
 
-            console.log(id);
-
             userQuery.get(id, {
                 success: function (record) {
-                    var queryPromises = [];
 
                     var screen_name = record.get("screen_name");
-                    console.log(record);
+
+                    console.log("\n\n" + (new Date().getTime() / 1000) + " screen_name: " + screen_name);
 
                     if (record.length === 0) {
                         console.log("-- Get record faild.");
@@ -189,36 +227,39 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                         promise.reject();
                     }
 
-                    console.log("-- Get record successed." + screen_name);
-
                     var totalTweets = 0,
                         totalFavorited = 0,
-                        totalRetweeted = 0;
+                        totalRetweeted = 0,
+                        originalTweets = 0;
 
-                    var pagingCallback = function(record, objectLength, nextMaxId, queryPromise) {
+                    var pagingCallback = function (record, objectLength, nextMaxId) {
 
-                        if (objectLength == 200) {
-                            processApi(nextMaxId - 1);
-                        }
+                        record.set("favorited", totalFavorited);
+                        record.set("retweeted", totalRetweeted);
+                        record.set("replies", totalTweets - originalTweets);
+                        record.set("tweets", originalTweets);
 
-                        queryPromise.resolve();
+                        //console.log((new Date().getTime() / 1000) + " Total length: " + totalTweets);
 
-                        Parse.Promise.when(queryPromise).then(function() {
-                            record.set("favorited", totalFavorited);
-                            record.set("retweeted", totalRetweeted);
-                            record.set("total_cacl", totalTweets);
+                        return record.save(null, {
+                            success: function (objs) {
 
-                            console.log((new Date().getTime() / 1000) + " Total length: " + totalTweets);
+                                //console.log("-- statuses/user_timeline Saved " + screen_name + "/" + totalTweets + ", successed.");
 
-                            record.save(null, {
-                                success: function (objs) {
-                                    console.log("-- statuses/user_timeline Saved " + screen_name + "/" + totalTweets + ", successed.");
-                                },
-                                error: function (error) {
-                                    console.log("-- statuses/user_timeline failed.");
-                                    console.log(error);
+                                if (objectLength == that.countsPerBatch) {
+                                    return processApi(nextMaxId);
                                 }
-                            });
+                                else {
+                                    // Only when there's no paginations left, we then mark looping resolve();
+                                    loopingPromise.resolve();
+
+                                    return Parse.Promise.as();
+                                }
+                            },
+                            error: function (error) {
+                                console.log("-- statuses/user_timeline failed.");
+                                console.log(error);
+                            }
                         });
 
                     };
@@ -231,7 +272,8 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                         // Prepare concatenating for max_id query string
                         var max_id_str = (max_id == 0) ? '' : 'max_id=' + max_id;
 
-                        var urlLink = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_rts=false&screen_name=" + screen_name + "&count=200&" + max_id_str;
+                        //var urlLink = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_rts=false&screen_name=" + screen_name + "&count=200&" + max_id_str;
+                        var urlLink = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + screen_name + "&count=" + that.countsPerBatch + "&" + max_id_str;
 
                         var message = {
                             method: "GET",
@@ -246,41 +288,84 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                         var sig = oauth.getParameter(message.parameters, "oauth_signature") + "=";
                         var encodedSig = oauth.percentEncode(sig);
 
-                        // Promise for current api call
-                        var queryPromise = new Parse.Promise();
-
-                        queryPromises.push(Parse.Cloud.httpRequest({
+                        return Parse.Cloud.httpRequest({
                             method: "GET",
                             url: urlLink,
                             headers: {
                                 Authorization: 'OAuth oauth_consumer_key="' + oauth_consumer_key + '", oauth_nonce=' + nonce + ', oauth_signature=' + encodedSig + ', oauth_signature_method="HMAC-SHA1", oauth_timestamp=' + timestamp + ',oauth_token="' + oauth_token + '", oauth_version="1.0"'
                             },
                             success: function (httpResponse) {
-                                var data = JSON.parse(httpResponse.text);
 
-                                console.log((new Date().getTime() / 1000) + " Length: " + data.length);
+                                var datas = JSON.parse(httpResponse.text),
+                                    tweetsPromisesCollection = [],
+                                    tweets = [];
 
-                                totalTweets += data.length;
+                                totalTweets += datas.length;
 
-                                for (var i = 0; i < data.length; i++) {
-                                    totalFavorited += data[i].favorite_count;
-                                    totalRetweeted += data[i].retweet_count;
-                                }
+                                _.each(datas, function (data) {
 
-                                return Parse.Promise.when(pagingCallback(record, data.length, data[data.length - 1].id_str, queryPromise));
+                                    var Tweets = Parse.Object.extend("Tweets"),
+                                        tweetPromise = new Parse.Promise(),
+                                        tweet = new Tweets(),
+                                        tweetQuery = new Parse.Query(Tweets);
+
+                                    tweetsPromisesCollection.push(tweetPromise);
+
+                                    tweetQuery.equalTo("id_str", data.id_str);
+                                    tweetQuery.limit(1);
+
+                                    tweetQuery.find().then(function (result) {
+
+                                        if (result.length === 0) {
+
+                                            // Excluding retweets
+                                            if (data.text.indexOf("RT @") == -1) {
+                                                totalFavorited += data.favorite_count;
+                                                totalRetweeted += data.retweet_count;
+                                                originalTweets += 1;
+                                            }
+
+                                            tweet.set("text", data.text);
+                                            tweet.set("source", data.source);
+                                            tweet.set("retweet_count", data.retweet_count);
+                                            tweet.set("created_at", data.created_at);
+                                            tweet.set("favorite_count", data.favorite_count);
+                                            tweet.set("retweeted", data.retweeted);
+                                            tweet.set("id_str", data.id_str);
+                                            tweet.set("screen_name", screen_name);
+                                            tweet.set("entities", data.entities);
+
+                                            tweets.push(tweet);
+                                        }
+
+                                        tweetPromise.resolve();
+                                    });
+
+                                });
+
+                                Parse.Promise.when(tweetsPromisesCollection).then(function(){
+
+                                    Parse.Object.saveAll(tweets, {
+                                        success: function(objs) {
+                                            console.log("\n\n" + (new Date().getTime() / 1000) + " Saved " + objs.length + " tweets.");
+                                        },
+                                        error: function(error) {
+                                            console.log("Saving Tweets Failed!");
+                                        }
+                                    })
+
+                                });
+
+                                return pagingCallback(record, datas.length, idStrDecrement(datas[datas.length - 1].id_str));
                             },
                             error: function (error) {
                                 console.log(error);
 
                                 // Reject the whole method
                                 promise.reject(error.message);
-
-                                // Reject Current api call
-                                queryPromise.reject();
                             }
-                        }));
+                        });
 
-                        // Every api call, we add to collection, and wait for every call to finished
                     };
 
                     /**
@@ -289,11 +374,8 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                      * Each api call may only conatain 200 maximum tweets,
                      * hence, callback funcion is perform to deal with asychronous api calls
                      */
-                    processApi();
 
-                    Parse.Promise.when(queryPromises).then(function () {
-
-                    });
+                    return Parse.Promise.when(processApi(null));
                 },
                 error: function (error) {
                     console.log("Uh oh, we couldn't find the object!");
@@ -305,16 +387,27 @@ Parse.Cloud.job("twitterFeed", function (request, status) {
                     }
                 }
             });
+        });
 
+        Parse.Promise.when(promisesCollection).then(function () {
+            console.log("\n\n" + (new Date().getTime() / 1000) + " promises length: " + promisesCollection.length + "\n\n");
+
+            // If all tweets have been save. Then this method is done.
+            promise.resolve();
         });
 
         return promise;
 
     };
 
+    // Main procedure.
     Parse.Promise.when(lookupUsersInfo(this.trackingScreenNames))
         .then(function () {
-            calculateTweetsInfoFromUsers()
+            console.log("\n\n" + (new Date().getTime() / 1000) + " Finished Lookup, now processing 'Retweets and Favorited'. \n\n");
+
+            return Parse.Promise.when(calculateTweetsInfoFromUsers());
+        }).then(function () {
+            console.log("\n\n" + (new Date().getTime() / 1000) + " Finished timeline calculation for Retweets and Favorited, now processing 'Searching'. \n\n");
         });
 
 });
