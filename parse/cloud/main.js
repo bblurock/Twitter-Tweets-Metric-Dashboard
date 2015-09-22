@@ -1,413 +1,707 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
-//var oauth = require("./libs/oauth.js");
 
-Parse.Cloud.job("twitterFeed", function (request, response) {
-//Parse.Cloud.define('hello', function(request, response) {
+Parse.Cloud.job("test1000", function (request, status) {
+
     Parse.Cloud.useMasterKey();
 
-    var that = this;
+    var i, tests = [];
 
-    this.tableName = "user_status";
-    this.trackingScreenNames = ['tickleapp', 'wonderworkshop', 'spheroedu', 'gotynker', 'hopscotch', 'codehs', 'kodable', 'codeorg', 'scratch', 'trinketapp'];
-    this.trackingParseIDs = [];
-    this.countsPerBatch = 100;
+    for (i = 0; i < 3000 ; i++)
+    {
+        var testingPrototype = Parse.Object.extend("testing");
 
-    // Read parameters from Parse.com
-    var consumerSecret = request.params.consumerSecret;
-    var oauth_consumer_key = request.params.oauth_consumer_key;
-    var tokenSecret = request.params.tokenSecret;
-    var oauth_token = request.params.oauth_token;
+        var test = new testingPrototype();
 
-    // Setup shared vars for Twitter API
-    var nonce = oauth.nonce(32);
-    var ts = Math.floor(new Date().getTime() / 1000);
-    var timestamp = ts.toString();
+        test.set("timestamp", (new Date().getTime()/1000).toString());
 
-    var accessor = {
-        consumerSecret: consumerSecret,
-        tokenSecret: tokenSecret
-    };
+        tests.push(test);
 
-    var params = {
-        oauth_version: "1.0",
-        oauth_consumer_key: oauth_consumer_key,
-        oauth_token: oauth_token,
-        oauth_timestamp: timestamp,
-        oauth_nonce: nonce,
-        oauth_signature_method: "HMAC-SHA1"
-    };
+        console.log(i);
+    }
 
-    var idStrDecrement = function(idStr){
-        var index = 1,
-            flag = true,
-            length = idStr.length;
+    console.log("Start saving.");
 
-        function setCharAt(str, index, chr) {
-            if (index > str.length - 1) {
-                return str;
-            }
+    Parse.Object.saveAll(tests, {
+        success: function(objs) {
+            console.log('Saving success ' + objs.length);
+        },
+        error: function(e) {
 
-            return str.substr(0, index) + chr + str.substr(index + 1);
         }
+    });
+});
 
-        while (flag) {
-            var i = length - index,
-                currentDigit = idStr[i];
 
-            currentDigit = parseInt(currentDigit) - 1;
+Parse.Cloud.job("test3000", function (request, status) {
 
-            if (currentDigit >= 0) {
-                flag = false;
-                idStr = setCharAt(idStr, i, currentDigit.toString());
+    Parse.Cloud.useMasterKey();
 
-                continue;
-            }
+    var i, tests = [];
 
-            idStr = setCharAt(idStr, i, "0");
-            index++;
+    for (i = 0; i < 3000 ; i++)
+    {
+        var testingPrototype = Parse.Object.extend("testing");
+
+        var test = new testingPrototype();
+
+        test.set("timestamp", (new Date().getTime()/1000).toString());
+
+        tests.push(test);
+
+        console.log(i);
+    }
+
+    console.log("Start saving.");
+
+    Parse.Object.saveAll(tests, {
+        success: function(objs) {
+            console.log('Saving success ' + objs.length);
+        },
+        error: function(e) {
+
         }
+    });
+});
 
-        return idStr;
+Parse.Cloud.job("twitterParser", function (request, status) {
+
+    Parse.Cloud.useMasterKey();
+
+    var Twitter = function(params) {
+
+        this.tableName = params.tableName;
+
+        this.screenNames = params.screenNames;
+
+        this.tweetsPerPage = params.tweetsPerPage;
+
+        this.tweetsPerSearchPage = params.tweetsPerSearchPage;
+
+        this.maxQueryTweets = params.maxQueryTweets;
+
+        // Setup twitter app keys for Twitter API
+        this.consumerSecret     = params.consumerSecret;
+        this.oauth_consumer_key = params.oauth_consumer_key;
+        this.tokenSecret        = params.tokenSecret;
+        this.oauth_token        = params.oauth_token;
+
+        this.ts = new Date().getTime() / 1000;
+        this.timestamp = Math.floor(this.ts).toString();
+
+        this.twitterAccessor = {
+            consumerSecret: this.consumerSecret,
+            tokenSecret   : this.tokenSecret
+        };
+
+        this.counters = {
+            totalTweets    : 0,
+            totalFavorited : 0,
+            totalRetweeted : 0,
+            originalTweets : 0,
+            totalReplies   : 0,
+            totalRetweets  : 0,
+            totalReplied   : 0,
+            totalMetioned  : 0,
+            totalShared    : 0
+        };
+
+        this.data = [];
+
     };
 
-    /**
-     * @param  {array}         screenNames Containing the screen_name of desired Twitter account
-     * @return {Parse.Promise}
-     */
-    var lookupUsersInfo = function (screenNames) {
+    Twitter.prototype = {
 
-        // This promise is for the current method
-        var promise = new Parse.Promise();
+        initializeApi: function(url) {
 
-        var users = [],
-            lookupUsers = [],
-            queryPromises = [];
+            var urlLink = url;
 
-        // Filter out the screenNames' that already been processed
-        _.each(screenNames, function (screenName) {
-            var queryPromise = new Parse.Promise();
+            // Setup shared vars for Twitter API
+            var nonce     = oauth.nonce(32);
 
-            // set today starting at 00:00:00
-            var today = new Date();
-            var userStatus = Parse.Object.extend(that.tableName);
-            var query = new Parse.Query(userStatus);
+            var twitterParams = {
+                oauth_version         : "1.0",
+                oauth_consumer_key    : this.oauth_consumer_key,
+                oauth_token           : this.oauth_token,
+                oauth_timestamp       : this.timestamp,
+                oauth_nonce           : nonce,
+                oauth_signature_method: "HMAC-SHA1"
+            };
 
-            today.setHours(0, 0, 0, 0);
-            query.descending("createdAt");
-            query.equalTo("screen_name", screenName.toLowerCase());
-            query.greaterThanOrEqualTo("createdAt", today);
-            query.limit(1);
+            var message = {
+                method: "GET",
+                action: urlLink,
+                parameters: twitterParams
+            };
 
-            query.find().then(function (result) {
+            oauth.SignatureMethod.sign(message, this.twitterAccessor);
 
-                // The user job already been done today.
-                if (result.length === 0) {
-                    users.push(screenName);
+            var sig = oauth.getParameter(message.parameters, "oauth_signature") + "=";
+            var encodedSig = oauth.percentEncode(sig);
+
+            return 'OAuth oauth_consumer_key="' + this.oauth_consumer_key + '", oauth_nonce=' + nonce + ', oauth_signature=' + encodedSig + ', oauth_signature_method="HMAC-SHA1", oauth_timestamp=' + this.timestamp + ',oauth_token="' + this.oauth_token + '", oauth_version="1.0"';
+
+        },
+
+        getDecrementMaxId: function (maxIdStr) {
+
+            var i, currentDigit,
+                index = 1,
+                borrowDigit = true,
+                length = maxIdStr.length;
+
+            function setCharAt(str, index, chr) {
+
+                if (index > str.length - 1) {
+                    return str;
                 }
 
-                queryPromise.resolve();
-            });
+                return str.substr(0, index) + chr + str.substr(index + 1);
+            }
 
-            queryPromises.push(queryPromise);
-        });
+            while (borrowDigit) {
 
-        // Perform Twitter Api call: users/lookup
-        Parse.Promise.when(queryPromises).then(function () {
+                i = length - index;
+                currentDigit = maxIdStr[i];
+                currentDigit = parseInt(currentDigit) - 1;
 
-            var usersStr = users.join();
+                if (currentDigit >= 0) {
 
-            if (usersStr === "") {
-                console.log("-- users/lookup.json: nothing new.");
+                    borrowDigit = false;
+                    maxIdStr = setCharAt(maxIdStr, i, currentDigit.toString());
 
-                promise.resolve();
+                    continue;
+                }
+
+                maxIdStr = setCharAt(maxIdStr, i, "0");
+                index += 1;
+            }
+
+            return maxIdStr;
+        },
+
+        queryUserTimelineApiCallback: function (recordLength, nextMaxId, screenName, promise) {
+
+            console.log(this.data[screenName].totalTweets);
+
+            if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
+
+                //console.log("RecordLength: " + recordLength);
+
+                return this.queryUserTimelineApi(nextMaxId, screenName, promise);
             }
             else {
-                var urlLink = "https://api.twitter.com/1.1/users/lookup.json?screen_name=" + usersStr;
 
-                var message = {
-                    method: "GET",
-                    action: urlLink,
-                    parameters: params
-                };
+                //console.log("RecordLength: " + recordLength);
 
-                oauth.SignatureMethod.sign(message, accessor);
+                // When there's no further page left
+                this.data[screenName].favorited   = this.counters.totalFavorited;
+                this.data[screenName].retweeted   = this.counters.totalRetweeted;
+                this.data[screenName].replies     = this.counters.totalReplies;
+                this.data[screenName].tweets      = this.counters.originalTweets - this.counters.totalReplies;
+                this.data[screenName].retweets    = this.counters.totalRetweets;
+                this.data[screenName].totalTweets = this.counters.totalTweets;
 
-                //var normPar = oauth.SignatureMethod.normalizeParameters(message.parameters);
-                //var baseString = oauth.SignatureMethod.getBaseString(message);
-                var sig = oauth.getParameter(message.parameters, "oauth_signature") + "=";
-                var encodedSig = oauth.percentEncode(sig);
+                //console.log((new Date().getTime() / 1000) + " " + JSON.stringify(this.data[screenName]));
 
-                Parse.Cloud.httpRequest({
-                    method: "GET",
-                    url: urlLink,
-                    headers: {
-                        Authorization: 'OAuth oauth_consumer_key="' + oauth_consumer_key + '", oauth_nonce=' + nonce + ', oauth_signature=' + encodedSig + ', oauth_signature_method="HMAC-SHA1", oauth_timestamp=' + timestamp + ',oauth_token="' + oauth_token + '", oauth_version="1.0"'
-                    },
-                    success: function (httpResponse) {
-                        var data = JSON.parse(httpResponse.text);
+                promise.resolve("Finishing Pagination!");
+            }
+        },
 
-                        var lookupUsers = new Array();
+        queryUserTimelineApi: function (maxId, screenName, promise) {
 
-                        for (var i = 0; i < data.length; i++) {
-                            var usersClass = Parse.Object.extend(that.tableName),
-                                user = new usersClass();
+            var that = this;
 
-                            user.set("user_id", data[i].id);
-                            user.set("screen_name", data[i].screen_name.toLowerCase());
-                            user.set("following", data[i].friends_count);
-                            user.set("followers", data[i].followers_count);
-                            user.set("favorites", data[i].favourites_count);
-                            user.set("listed", data[i].listed_count);
+            var promise = promise || new Parse.Promise();
 
-                            lookupUsers.push(user);
+            // Initialize max_id
+            maxId = maxId || 0;
+
+            // Prepare concatenating for max_id query string
+            var maxIdStr = (maxId === 0) ? '' : '&max_id=' + maxId;
+
+            var url = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_rts=1&screen_name=" + screenName + "&count=" + that.tweetsPerPage + maxIdStr;
+
+            var apiAuthorizationHeaders = that.initializeApi(url);
+
+            //console.log((new Date().getTime() / 1000) + " : " + url);
+
+            Parse.Cloud.httpRequest({
+                method: "GET",
+                url: url,
+                headers: {
+                    Authorization: apiAuthorizationHeaders
+                },
+                success: function (httpResponse) {
+
+                    var i, nextMaxId = 0;
+
+                    var results = JSON.parse(httpResponse.text);
+
+                    that.counters.totalTweets += results.length;
+
+                    for (i = 0; i < results.length ; i++) {
+
+                        // Calculating metrics
+                        if (typeof(results[i].retweeted_status) === 'undefined') {
+                            that.counters.totalFavorited += results[i].favorite_count;
+                            that.counters.totalRetweeted += results[i].retweet_count;
+                            that.counters.originalTweets += 1;
+
+                            // Saving tweets to data object
+                            that.data[screenName].tweetsDetails.push(results[i]);
+                        } else {
+                            that.counters.totalRetweets += 1;
                         }
 
-                        Parse.Object.saveAll(lookupUsers, {
-                            success: function (objs) {
-                                console.log("-- users/json.php Lookup successed.");
+                        if (results[i].in_reply_to_screen_name !== null) {
+                            that.counters.totalReplies += 1;
+                        }
 
-                                // Track the success Ids for next API procedure
-                                _.each(objs, function (obj) {
-                                    that.trackingParseIDs.push(obj.id);
-                                });
-
-                                promise.resolve();
-                            },
-                            error: function (error) {
-                                // status.error("-- users/json.php Lookup failed.");
-                                console.log("-- users/json.php Lookup failed.");
-                                console.log(error);
-
-                                promise.reject(error.message);
-                            }
-                        });
-                    },
-                    error: function (error) {
-                        console.log(error);
-
-                        promise.reject(error.message);
                     }
+
+                    if (results.length !== 0) {
+                        nextMaxId = that.getDecrementMaxId(results[results.length - 1].id_str);
+                    }
+
+                    return that.queryUserTimelineApiCallback(results.length, nextMaxId, screenName, promise);
+                },
+                error: function (httpResponse) {
+                    console.log("Twitter API error code: " + httpResponse.status);
+                }
+            }); // httpRequest
+
+            return promise;
+        },
+
+        performUserTweetsAnalytics: function() {
+
+            var that = this;
+
+            var promise = Parse.Promise.as();
+
+            _.each(that.screenNames, function(screenName) {
+
+                promise = promise.then(function () {
+
+                    // Reset all counters
+                    for (var key in that.counters)
+                    {
+                        that.counters[key] = 0;
+                    }
+
+                    console.log((new Date().getTime() / 1000) + " ScreenName: " + screenName);
+
+                    return that.queryUserTimelineApi(null, screenName).then(function () {
+                        return Parse.Promise.as();
+                    });
+
+                }); // promise
+
+            }); // _.each
+
+            return promise;
+
+        },
+
+        querySearchApiCallback: function (recordLength, nextMaxId, screenName, promise) {
+
+            if (this.data[screenName].totalTweets <= this.maxQueryTweets && recordLength > 0) {
+
+                //console.log("RecordLength: " + recordLength);
+
+                return this.querySearchApi(nextMaxId, screenName, promise);
+            }
+            else {
+
+                console.log("RecordLength: " + recordLength);
+
+                // When there's no further page left
+
+                promise.resolve("Finishing Pagination!");
+            }
+        },
+
+        querySearchApi: function (maxId, screenName, promise) {
+
+            var that = this;
+
+            var promise = promise || new Parse.Promise();
+
+            // Initialize max_id
+            maxId = maxId || 0;
+
+            // Prepare concatenating for max_id query string
+            var maxIdStr = (maxId === 0) ? '' : '&max_id=' + maxId;
+
+            var url = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeURIComponent("@") + screenName + "&count=" + that.tweetsPerSearchPage + maxIdStr + "&result_type=recent&include_entities=true";
+
+            //console.log(url);
+
+            var apiAuthorizationHeaders = that.initializeApi(url);
+
+            Parse.Cloud.httpRequest({
+                method: "GET",
+                url: url,
+                headers: {
+                    Authorization: apiAuthorizationHeaders
+                },
+                success: function (httpResponse) {
+
+                    var i, nextMaxId = 0;
+
+                    var results = JSON.parse(httpResponse.text);
+
+                    console.log(JSON.stringify(results));
+
+                    for (i = 0; i < results.length ; i++) {
+
+                        //console.log(results[i].text);
+
+                    }
+
+                    if (results.length !== 0) {
+                        nextMaxId = that.getDecrementMaxId(results[results.length - 1].id_str);
+                    }
+
+                    return that.querySearchApiCallback(results.length, nextMaxId, screenName, promise);
+                },
+                error: function (httpResponse) {
+                    console.log("Twitter API error code: " + httpResponse.status);
+                }
+            }); // httpRequest
+
+            return promise;
+
+        },
+
+        performUserInteractionAnalytics: function () {
+
+            var that = this;
+
+            var promise = Parse.Promise.as();
+
+            _.each(that.screenNames, function(screenName) {
+
+                promise = promise.then(function () {
+
+                    return that.querySearchApi(null, screenName).then(function () {
+                        return Parse.Promise.as();
+                    });
+
+                }); // promise
+
+            }); // _.each
+
+            return promise;
+
+        },
+
+        initDataObject: function (name) {
+
+            this.data[name] = {
+                screen_name: '',
+                following: '',
+                followers: '',
+                favorites: '',
+                favorited: '',
+                listed: '',
+                tweets: '',
+                replies: '',
+                retweets: '',
+                retweeted: '',
+                totalTweets: '',
+                metioned: '',
+                replied: '',
+                shared: '',
+                tweetsDetails: []
+            };
+
+        },
+
+        performScreenNamesLookup: function() {
+
+            var that = this;
+
+            var url = "https://api.twitter.com/1.1/users/lookup.json?screen_name=" + this.screenNames.join();
+
+            var apiAuthorizationHeaders = that.initializeApi(url);
+
+            return Parse.Cloud.httpRequest({
+                method: "GET",
+                url: url,
+                headers: {
+                    Authorization: apiAuthorizationHeaders
+                },
+                success: function (httpResponse) {
+
+                    var i, name;
+
+                    var data = that.data;
+
+                    var results = JSON.parse(httpResponse.text);
+
+                    for (i = 0; i < results.length ; i++) {
+
+                        name = results[i].screen_name.toLowerCase();
+
+                        if (!(name in data))
+                        {
+                            that.initDataObject(name);
+                        }
+
+                        data[name].screen_name = results[i].screen_name.toLowerCase();
+                        data[name].following   = results[i].friends_count;
+                        data[name].followers   = results[i].followers_count;
+                        data[name].favorites   = results[i].favourites_count;
+                        data[name].listed      = results[i].listed_count;
+                    }
+
+                },
+                error: function (httpResponse) {
+                    console.log('Request failed with response code ' + JSON.stringify(httpResponse.headers));
+                }
+            }); // httpRequest
+        },
+
+        savingUserTimelineStatus: function () {
+
+            var tweetsPrototype = Parse.Object.extend("user_status");
+
+            var that = this;
+
+            var promise = Parse.Promise.as(0);
+
+            var i;
+
+            for (i = 0 ; i < that.screenNames.length ; i++) {
+
+                promise = promise.then(function (k) {
+
+                    var name = that.screenNames[k];
+
+                    console.log((new Date().getTime() / 1000) + " Saving timeline: " + name);
+
+                    var userTimelinePrototype = Parse.Object.extend("twitter_user_timeline");
+
+                    var user = new userTimelinePrototype();
+
+                    user.set("screen_name", that.data[name].screen_name);
+                    user.set("following"  , that.data[name].following   ? that.data[name].following   : 0 );
+                    user.set("followers"  , that.data[name].followers   ? that.data[name].followers   : 0 );
+                    user.set("favorites"  , that.data[name].favorites   ? that.data[name].favorites   : 0 );
+                    user.set("favorited"  , that.data[name].favorited   ? that.data[name].favorited   : 0 );
+                    user.set("listed"     , that.data[name].listed      ? that.data[name].listed      : 0 );
+                    user.set("tweets"     , that.data[name].tweets      ? that.data[name].tweets      : 0 );
+                    user.set("replies"    , that.data[name].replies     ? that.data[name].replies     : 0 );
+                    user.set("retweets"   , that.data[name].retweets    ? that.data[name].retweets    : 0 );
+                    user.set("retweeted"  , that.data[name].retweeted   ? that.data[name].retweeted   : 0 );
+                    user.set("totalTweets", that.data[name].totalTweets ? that.data[name].totalTweets : 0 );
+                    user.set("metioned"   , that.data[name].metioned    ? that.data[name].metioned    : 0 );
+                    user.set("replied"    , that.data[name].replied     ? that.data[name].replied     : 0 );
+                    user.set("shared"     , that.data[name].shared      ? that.data[name].shared      : 0 );
+
+                    return user.save().then(function(objs) {
+
+                        console.log((new Date().getTime() / 1000) + " Saved " + name + " timeline.");
+
+                        return Parse.Promise.as(k+1);
+
+                    }, function(e) {
+
+                        console.error(e);
+
+                    });
+
                 });
             }
 
-        });
+            return promise;
+        },
 
-        return Parse.Promise.when(promise);
-    }
+        assignExistedTweetObjectId: function(name) {
 
-    /**
-     * @return {Parse.Promise}
-     */
-    var calculateTweetsInfoFromUsers = function () {
+            var i, j;
+            var tweetsPrototype = Parse.Object.extend("Tweets");
+            var query = new Parse.Query(tweetsPrototype);
+            var that = this;
 
-        // This promise is for the current method
-        var promise = new Parse.Promise();
+            query.select("objectId", "id_str", "screen_name");
 
-        var promisesCollection = [];
+            query.equalTo("screen_name", name);
 
-        _.each(this.trackingParseIDs, function (id) {
+            return query.find().then(function (results) {
 
-            var loopingPromise = new Parse.Promise();
-            promisesCollection.push(loopingPromise);
+                if (results.length === 0) {
+                    return Parse.Promise.as();
+                }
 
-            var userStatus = Parse.Object.extend(that.tableName);
-            var userQuery = new Parse.Query(userStatus);
-
-            userQuery.get(id, {
-                success: function (record) {
-
-                    var screen_name = record.get("screen_name");
-
-                    console.log("\n\n" + (new Date().getTime() / 1000) + " screen_name: " + screen_name);
-
-                    if (record.length === 0) {
-                        console.log("-- Get record faild.");
-
-                        promise.reject();
-                    }
-
-                    var totalTweets = 0,
-                        totalFavorited = 0,
-                        totalRetweeted = 0,
-                        originalTweets = 0;
-
-                    var pagingCallback = function (record, objectLength, nextMaxId) {
-
-                        record.set("favorited", totalFavorited);
-                        record.set("retweeted", totalRetweeted);
-                        record.set("replies", totalTweets - originalTweets);
-                        record.set("tweets", originalTweets);
-
-                        //console.log((new Date().getTime() / 1000) + " Total length: " + totalTweets);
-
-                        return record.save(null, {
-                            success: function (objs) {
-
-                                //console.log("-- statuses/user_timeline Saved " + screen_name + "/" + totalTweets + ", successed.");
-
-                                if (objectLength == that.countsPerBatch) {
-                                    return processApi(nextMaxId);
-                                }
-                                else {
-                                    // Only when there's no paginations left, we then mark looping resolve();
-                                    loopingPromise.resolve();
-
-                                    return Parse.Promise.as();
-                                }
-                            },
-                            error: function (error) {
-                                console.log("-- statuses/user_timeline failed.");
-                                console.log(error);
-                            }
-                        });
-
-                    };
-
-                    var processApi = function (max_id) {
-
-                        // Initialize max_id
-                        max_id = max_id || 0;
-
-                        // Prepare concatenating for max_id query string
-                        var max_id_str = (max_id == 0) ? '' : 'max_id=' + max_id;
-
-                        //var urlLink = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_rts=false&screen_name=" + screen_name + "&count=200&" + max_id_str;
-                        var urlLink = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + screen_name + "&count=" + that.countsPerBatch + "&" + max_id_str;
-
-                        var message = {
-                            method: "GET",
-                            action: urlLink,
-                            parameters: params
-                        };
-
-                        oauth.SignatureMethod.sign(message, accessor);
-
-                        //var normPar = oauth.SignatureMethod.normalizeParameters(message.parameters);
-                        //var baseString = oauth.SignatureMethod.getBaseString(message);
-                        var sig = oauth.getParameter(message.parameters, "oauth_signature") + "=";
-                        var encodedSig = oauth.percentEncode(sig);
-
-                        return Parse.Cloud.httpRequest({
-                            method: "GET",
-                            url: urlLink,
-                            headers: {
-                                Authorization: 'OAuth oauth_consumer_key="' + oauth_consumer_key + '", oauth_nonce=' + nonce + ', oauth_signature=' + encodedSig + ', oauth_signature_method="HMAC-SHA1", oauth_timestamp=' + timestamp + ',oauth_token="' + oauth_token + '", oauth_version="1.0"'
-                            },
-                            success: function (httpResponse) {
-
-                                var datas = JSON.parse(httpResponse.text),
-                                    tweetsPromisesCollection = [],
-                                    tweets = [];
-
-                                totalTweets += datas.length;
-
-                                _.each(datas, function (data) {
-
-                                    var Tweets = Parse.Object.extend("Tweets"),
-                                        tweetPromise = new Parse.Promise(),
-                                        tweet = new Tweets(),
-                                        tweetQuery = new Parse.Query(Tweets);
-
-                                    tweetsPromisesCollection.push(tweetPromise);
-
-                                    tweetQuery.equalTo("id_str", data.id_str);
-                                    tweetQuery.limit(1);
-
-                                    tweetQuery.find().then(function (result) {
-
-                                        if (result.length === 0) {
-
-                                            // Excluding retweets
-                                            if (data.text.indexOf("RT @") == -1) {
-                                                totalFavorited += data.favorite_count;
-                                                totalRetweeted += data.retweet_count;
-                                                originalTweets += 1;
-                                            }
-
-                                            tweet.set("text", data.text);
-                                            tweet.set("source", data.source);
-                                            tweet.set("retweet_count", data.retweet_count);
-                                            tweet.set("created_at", data.created_at);
-                                            tweet.set("favorite_count", data.favorite_count);
-                                            tweet.set("retweeted", data.retweeted);
-                                            tweet.set("id_str", data.id_str);
-                                            tweet.set("screen_name", screen_name);
-                                            tweet.set("entities", data.entities);
-
-                                            tweets.push(tweet);
-                                        }
-
-                                        tweetPromise.resolve();
-                                    });
-
-                                });
-
-                                Parse.Promise.when(tweetsPromisesCollection).then(function(){
-
-                                    Parse.Object.saveAll(tweets, {
-                                        success: function(objs) {
-                                            console.log("\n\n" + (new Date().getTime() / 1000) + " Saved " + objs.length + " tweets.");
-                                        },
-                                        error: function(error) {
-                                            console.log("Saving Tweets Failed!");
-                                        }
-                                    })
-
-                                });
-
-                                return pagingCallback(record, datas.length, idStrDecrement(datas[datas.length - 1].id_str));
-                            },
-                            error: function (error) {
-                                console.log(error);
-
-                                // Reject the whole method
-                                promise.reject(error.message);
-                            }
-                        });
-
-                    };
-
-                    /**
-                     * Perform Twitter Api call: statuses/user_timeline
-                     *
-                     * Each api call may only conatain 200 maximum tweets,
-                     * hence, callback funcion is perform to deal with asychronous api calls
-                     */
-
-                    return Parse.Promise.when(processApi(null));
-                },
-                error: function (error) {
-                    console.log("Uh oh, we couldn't find the object!");
-
-                    if (error.code === Parse.Error.OBJECT_NOT_FOUND) {
-                        console.log("Uh oh, we couldn't find the object!");
-                    } else if (error.code === Parse.Error.CONNECTION_FAILED) {
-                        console.log("Uh oh, we couldn't even connect to the Parse Cloud!");
+                for (i = 0 ; i < results.length ; i++ )
+                {
+                    for (j = 0 ; j < that.length ; j++ )
+                    {
+                        if (results[i].get("id_str") === that[j].id_str)
+                        {
+                            that[j].objectId = results[i].id;
+                        }
                     }
                 }
+
+                return Parse.Promise.as();
             });
-        });
 
-        Parse.Promise.when(promisesCollection).then(function () {
-            console.log("\n\n" + (new Date().getTime() / 1000) + " promises length: " + promisesCollection.length + "\n\n");
+        },
 
-            // If all tweets have been save. Then this method is done.
-            promise.resolve();
-        });
+        savingTweetsOnParse: function() {
 
-        return promise;
+            var tweetsPrototype = Parse.Object.extend("Tweets");
+            var that = this;
+            var promise = Parse.Promise.as(0);
+            var n;
+
+            for (n = 0 ; n < that.screenNames.length ; n++) {
+
+                promise = promise.then(function (nameIndex) {
+
+                    var name = that.screenNames[nameIndex];
+                    var length = that.data[name].tweetsDetails.length;
+
+                    console.log((new Date().getTime() / 1000) + " Prepare saving " + length + " tweets of - " + name );
+
+                    var i,
+                        beforeSaveTs = new Date().getTime() / 1000,
+                        tweets = [],
+                        assignIdPromise;
+
+                    assignIdPromise = that.assignExistedTweetObjectId.call(that.data[name].tweetsDetails, name).then(function () {
+
+                        for (i = 0 ; i < length ; i++) {
+
+                            // Collects tweets to push
+                            var item = new tweetsPrototype();
+
+                            item.id = that.data[name].tweetsDetails[i].objectId;
+
+                            item.set("text"          , that.data[name].tweetsDetails[i].text);
+                            item.set("source"        , that.data[name].tweetsDetails[i].source);
+                            item.set("retweet_count" , that.data[name].tweetsDetails[i].retweet_count);
+                            item.set("created_at"    , that.data[name].tweetsDetails[i].created_at);
+                            item.set("favorite_count", that.data[name].tweetsDetails[i].favorite_count);
+                            item.set("retweeted"     , that.data[name].tweetsDetails[i].retweeted);
+                            item.set("id_str"        , that.data[name].tweetsDetails[i].id_str);
+                            item.set("entities"      , that.data[name].tweetsDetails[i].entities);
+                            item.set("screen_name"   , name);
+
+                            //console.log(that.data[name].tweetsDetails[i].favorite_count, that.data[name].tweetsDetails[i].objectId);
+                            //
+                            //console.log(item.get("favorite_count"));
+
+                            tweets.push(item);
+                        }
+
+                        return Parse.Promise.as();
+
+                    });
+
+                    return Parse.Promise.when(assignIdPromise).then(function() {
+
+                        console.log((new Date().getTime() / 1000) + " In Saving.");
+
+                        // Perform Saving
+                        return Parse.Object.saveAll(tweets, {
+
+                            success: function (objs) {
+
+                                console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
+
+                            },
+                            error: function(e) {
+
+                                console.log("Saving tweets failed.");
+
+                            }
+                        }).then(function (objs) {
+                            var logPrototype = Parse.Object.extend("Logs");
+
+                            var log = new logPrototype();
+
+                            log.set("saving", objs.length);
+                            log.set("target", name);
+                            log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
+
+                            return log.save().then(function (){
+
+                                return Parse.Promise.as(nameIndex+1);
+
+                            });
+                        });
+
+                    });
+
+                }); // promise
+
+            } // for loop
+
+            return promise;
+
+        }
 
     };
 
-    // Main procedure.
-    Parse.Promise.when(lookupUsersInfo(this.trackingScreenNames))
-        .then(function () {
-            console.log("\n\n" + (new Date().getTime() / 1000) + " Finished Lookup, now processing 'Retweets and Favorited'. \n\n");
+    var twitterParser = new Twitter(
+        {
+            tableName          : "user_status",
+            screenNames        : ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            consumerSecret     : request.params.consumerSecret,
+            oauth_consumer_key : request.params.oauth_consumer_key,
+            tokenSecret        : request.params.tokenSecret,
+            oauth_token        : request.params.oauth_token,
+            tweetsPerPage      : 200,
+            tweetsPerSearchPage: 100,
+            maxQueryTweets     : 3200
+        }
+    );
 
-            return Parse.Promise.when(calculateTweetsInfoFromUsers());
+
+    // Parsing Procedure
+    Parse.Promise.when(
+
+        twitterParser.performScreenNamesLookup()
+
+    ).then(function () {
+
+            console.log((new Date().getTime() / 1000) + " Finished performScreenNamesLookup.");
+
+            return Parse.Promise.when(twitterParser.performUserTweetsAnalytics());
+
         }).then(function () {
-            console.log("\n\n" + (new Date().getTime() / 1000) + " Finished timeline calculation for Retweets and Favorited, now processing 'Searching'. \n\n");
+
+            console.log((new Date().getTime() / 1000) + " Finished performUserTweetsAnalytics.");
+
+            return Parse.Promise.when(twitterParser.savingUserTimelineStatus());
+
+        }).then(function () {
+
+            console.log((new Date().getTime() / 1000) + " Finished savingUserTimelineStatus.");
+
+            return Parse.Promise.when(twitterParser.savingTweetsOnParse());
+
+        }).then(function () {
+
+            console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
+
+            //return Parse.Promise.when(twitterParser.performUserInteractionAnalytics());
+
+        }).then(function () {
+
+            console.log((new Date().getTime() / 1000) + " Finished Saving Tweets");
+
+            //for (var key in twitterParser.data)
+            //{
+            //    console.log((new Date().getTime() / 1000) + " Result: " + JSON.stringify(twitterParser.data[key]));
+            //}
+
+            status.success("Job Done!");
         });
 
 });
