@@ -209,8 +209,6 @@ Twitter.prototype = {
 
         var apiAuthorizationHeaders = that.initializeApi(url);
 
-        console.log(apiAuthorizationHeaders);
-
         return Parse.Cloud.httpRequest({
             method: "GET",
             url: url,
@@ -514,8 +512,6 @@ Twitter.prototype = {
         var url = "https://api.twitter.com/1.1/users/lookup.json?screen_name=" + this.screenNames.join();
 
         var apiAuthorizationHeaders = that.initializeApi(url);
-
-        console.log(apiAuthorizationHeaders);
 
         return Parse.Cloud.httpRequest({
             method: "GET",
