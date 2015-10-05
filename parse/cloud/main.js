@@ -1,6 +1,12 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
 
+if (typeof Parse === 'undefined') {
+    var Parse = require('parse-cloudcode-runner').Parse;
+    Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+}
+
+
 var Twitter = function (params) {
 
     this.tableName = params.tableName;
@@ -1296,10 +1302,10 @@ Parse.Cloud.job("twitterParser", function (request, status) {
             //screenNames: ["tickleapp", "gotynker"],
             //screenNames: ["bblurock"],
 
-            consumerSecret     : request.params.consumerSecret,
-            oauth_consumer_key : request.params.oauth_consumer_key,
-            tokenSecret        : request.params.tokenSecret,
-            oauth_token        : request.params.oauth_token,
+            consumerSecret     : process.env.COMSUMER_SECRET,
+            oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
+            tokenSecret        : process.env.OAUTH_TOKEN,
+            oauth_token        : process.env.COMSUMER_SECRET,
 
             mentionsTable: "metioning_history",
             timelineTable: "twitter_user_timeline",
