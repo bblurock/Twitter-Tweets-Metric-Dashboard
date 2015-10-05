@@ -29,6 +29,8 @@ var Twitter = function (params) {
     this.tokenSecret = params.tokenSecret;
     this.oauth_token = params.oauth_token;
 
+    console.log(this.consumerSecret, this.oauth_consumer_key, this.tokenSecret, this.oauth_token);
+
     this.ts = new Date().getTime() / 1000;
     this.timestamp = Math.floor(this.ts).toString();
 
@@ -547,8 +549,6 @@ Twitter.prototype = {
             },
             error: function (httpResponse) {
                 console.log('Request failed with response code ' + JSON.stringify(httpResponse.headers));
-
-                return Parse.Promise.as().reject(JSON.stringify(httpResponse));
             }
         }); // httpRequest
     },
