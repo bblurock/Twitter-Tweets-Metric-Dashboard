@@ -515,6 +515,8 @@ Twitter.prototype = {
 
         var apiAuthorizationHeaders = that.initializeApi(url);
 
+        console.log(apiAuthorizationHeaders);
+
         return Parse.Cloud.httpRequest({
             method: "GET",
             url: url,
@@ -547,7 +549,7 @@ Twitter.prototype = {
 
             },
             error: function (httpResponse) {
-                console.log('Request failed with response code ' + JSON.stringify(httpResponse.headers));
+                console.log('Request failed with response code ' + JSON.stringify(httpResponse));
             }
         }); // httpRequest
     },
