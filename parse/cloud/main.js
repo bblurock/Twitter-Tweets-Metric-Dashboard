@@ -41,8 +41,10 @@ var Twitter = function (params) {
         totalReplied: 0,
         totalMetioned: 0,
         totalOriginalMetioned: 0,
-        totalOriginalShared: 0,
-        totalShared: 0
+        totalOriginalSharedTwitter: 0,
+        totalOriginalSharedOther: 0,
+        totalSharedTwitter: 0,
+        totalSharedOther: 0
     };
 
     this.data = [];
@@ -162,9 +164,8 @@ Twitter.prototype = {
 
         if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
 
-            //console.log("RecordLength: " + recordLength);
-
             return this.queryUserTimelineApi(nextMaxId, screenName, promise);
+
         }
         else {
 
@@ -180,7 +181,8 @@ Twitter.prototype = {
 
             //console.log((new Date().getTime() / 1000) + " " + JSON.stringify(this.data[screenName]));
 
-            promise.resolve();
+            return Parse.Promise.as();
+            //promise.resolve();
         }
 
     },
@@ -189,7 +191,7 @@ Twitter.prototype = {
 
         var that = this;
 
-        var promise = promise || new Parse.Promise();
+        //var promise = promise || new Parse.Promise();
 
         // Initialize max_id
         maxId = maxId || 0;
@@ -201,16 +203,12 @@ Twitter.prototype = {
 
         var apiAuthorizationHeaders = that.initializeApi(url);
 
-        //console.log((new Date().getTime() / 1000) + " : " + url);
-
-        Parse.Cloud.httpRequest({
+        return Parse.Cloud.httpRequest({
             method: "GET",
             url: url,
             headers: {
                 Authorization: apiAuthorizationHeaders
-            },
-            success: function (httpResponse) {
-
+            }}).then(function (httpResponse) {
                 var i, nextMaxId = 0;
 
                 var results = JSON.parse(httpResponse.text);
@@ -243,12 +241,13 @@ Twitter.prototype = {
 
                 return that.queryUserTimelineApiCallback(results.length, nextMaxId, screenName, promise);
             },
-            error: function (httpResponse) {
+            function (httpResponse) {
                 console.log("Twitter API error code: " + httpResponse.status);
-            }
-        }); // httpRequest
 
-        return promise;
+                that.status.error(JSON.stringify(httpResponse));
+            });
+
+        //return promise;
     },
 
     performUserTweetsAnalytics: function () {
@@ -266,11 +265,9 @@ Twitter.prototype = {
                     that.counters[key] = 0;
                 }
 
-                console.log((new Date().getTime() / 1000) + " ScreenName: " + screenName);
+                console.log((new Date().getTime() / 1000) + " performUserTweetsAnalytics ScreenName: " + screenName);
 
-                return that.queryUserTimelineApi(null, screenName).then(function () {
-                    return Parse.Promise.as();
-                });
+                return that.queryUserTimelineApi(null, screenName);
 
             }); // promise
 
@@ -284,7 +281,7 @@ Twitter.prototype = {
 
         if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
 
-            console.log("RecordLength: " + recordLength);
+            //console.log("RecordLength: " + recordLength);
 
             return this.querySearchApi(direction, nextMaxId, nextSinceId, screenName, promise);
         }
@@ -346,8 +343,6 @@ Twitter.prototype = {
 
         var url = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeURIComponent("@") + screenName + "&count=" + that.tweetsPerSearchPage + maxIdStr + sinceIdStr + "&include_entities=true";
 
-        console.log(url);
-
         var apiAuthorizationHeaders = that.initializeApi(url);
 
         Parse.Cloud.httpRequest({
@@ -362,7 +357,7 @@ Twitter.prototype = {
                 var results = JSON.parse(httpResponse.text).statuses;
                 var data = that.mentionedTweets;
 
-                console.log(results.length);
+                //console.log(results.length);
 
                 for (i = 0; i < results.length; i++) {
 
@@ -377,12 +372,12 @@ Twitter.prototype = {
                 if (results.length !== 0 && direction === 'backward') {
                     nextMaxId = that.getDecrementMaxId(results[results.length - 1].id_str);
 
-                    console.log("Next Max Id: " + nextMaxId);
+                    //console.log("Next Max Id: " + nextMaxId);
                 }
                 else if (results.length !== 0 && direction === 'forward') {
                     nextSinceId = that.getIncrementSinceId(results[0].id_str);
 
-                    console.log("Next Since Id: " + nextSinceId);
+                    //console.log("Next Since Id: " + nextSinceId);
                 }
 
                 return that.querySearchApiCallback(direction, results.length, nextMaxId, nextSinceId, screenName, promise);
@@ -390,6 +385,8 @@ Twitter.prototype = {
             },
             error: function (httpResponse) {
                 console.log("Twitter API error code: " + httpResponse.status);
+
+                promise.reject(JSON.stringify(httpResponse));
             }
         }); // httpRequest
 
@@ -418,7 +415,7 @@ Twitter.prototype = {
                     that.counters[key] = 0;
                 }
 
-                console.log((new Date().getTime() / 1000) + " ScreenName: " + screenName);
+                console.log((new Date().getTime() / 1000) + " performMentioningSearch ScreenName: " + screenName);
 
                 return Parse.Promise.as(screenName).then(function (name) {
 
@@ -429,8 +426,7 @@ Twitter.prototype = {
                         query.descending("id_str");
                     }
                     else {
-                        query.descending("id_str");
-                        //query.ascending("id_str");
+                        query.ascending("id_str");
                     }
 
                     query.equalTo("mentioning", name);
@@ -448,7 +444,7 @@ Twitter.prototype = {
                         if (result.length !== 0) {
                             idStr = result[0].get("id_str");
 
-                            console.log("Indexing id_str for " + name + " : " + idStr);
+                            //console.log("Indexing id_str for " + name + " : " + idStr);
 
                             if (direction === "forward") {
                                 idHandler.sinceId = that.getIncrementSinceId(idStr);
@@ -545,6 +541,8 @@ Twitter.prototype = {
             },
             error: function (httpResponse) {
                 console.log('Request failed with response code ' + JSON.stringify(httpResponse.headers));
+
+                return Parse.Promise.as().reject(JSON.stringify(httpResponse));
             }
         }); // httpRequest
     },
@@ -581,9 +579,16 @@ Twitter.prototype = {
                 user.set("retweeted", that.data[name].retweeted ? that.data[name].retweeted : 0);
                 user.set("totalTweets", that.data[name].totalTweets ? that.data[name].totalTweets : 0);
 
-                user.set("mentioned", that.data[name].totalMetioned ? that.data[name].totalMetioned : 0);
                 user.set("replied", that.data[name].totalReplied ? that.data[name].totalReplied : 0);
-                user.set("shared", that.data[name].totalShared ? that.data[name].totalShared : 0);
+
+                user.set("mentioned", that.data[name].totalMetioned ? that.data[name].totalMetioned : 0);
+                user.set("original_mentioned", that.data[name].totalOriginalMetioned ? that.data[name].totalOriginalMetioned : 0);
+
+                user.set("shared_twitter", that.data[name].totalSharedTwitter ? that.data[name].totalSharedTwitter : 0);
+                user.set("shared_other", that.data[name].totalSharedOther ? that.data[name].totalSharedOther : 0);
+
+                user.set("original_shared_twitter", that.data[name].totalOriginalSharedTwitter ? that.data[name].totalOriginalSharedTwitter : 0);
+                user.set("original_shared_other", that.data[name].totalOriginalSharedOther ? that.data[name].totalOriginalSharedOther : 0);
 
                 return user.save().then(function (objs) {
 
@@ -594,6 +599,8 @@ Twitter.prototype = {
                 }, function (e) {
 
                     console.error(e);
+
+
 
                 });
 
@@ -670,6 +677,8 @@ Twitter.prototype = {
 
                 console.log("Saving tweets failed.");
 
+                return Parse.Promise.as().reject("Saving tweets failed.");
+
             }
 
         }).then(function (objs) {
@@ -717,9 +726,13 @@ Twitter.prototype = {
                         return doQuery(skip);
                     }
                     else {
-                        that.data[screenName].totalMetioned = that.counters.totalMetioned;
-                        that.data[screenName].totalReplied = that.counters.totalReplied;
-                        that.data[screenName].totalShared = that.counters.totalShared;
+                        that.data[screenName].totalReplied               = that.counters.totalReplied;
+                        that.data[screenName].totalMetioned              = that.counters.totalMetioned;
+                        that.data[screenName].totalOriginalMetioned      = that.counters.totalOriginalMetioned;
+                        that.data[screenName].totalSharedTwitter         = that.counters.totalSharedTwitter;
+                        that.data[screenName].totalSharedOther           = that.counters.totalSharedOther;
+                        that.data[screenName].totalOriginalSharedTwitter = that.counters.totalOriginalSharedTwitter;
+                        that.data[screenName].totalOriginalSharedOther   = that.counters.totalOriginalSharedOther;
 
                         return Parse.Promise.as();
                     }
@@ -740,31 +753,10 @@ Twitter.prototype = {
 
                             if (results[i].get("user_screen_name") != screenName)
                             {
-                                if (results[i].get("in_reply_to_status_id") == null && results[i].get("in_reply_to_user_id") == null) {
-                                    that.counters.totalMetioned += 1;
-
-                                    if (results[i].get("text").indexOf("RT @") == -1)
-                                    {
-                                        that.counters.totalOriginalMetioned += 1;
-                                    }
-                                }
-
-                                // Calculate replied
-                                if (results[i].get("in_reply_to_status_id") || results[i].get("in_reply_to_user_id")) {
-                                    that.counters.totalReplied += 1;
-                                }
-
-                                // Calculate medias shared
-                                if (results[i].get("entities_urls")) {
-                                    that.counters.totalShared += 1;
-
-                                    if (results[i].get("text").indexOf("RT @") == -1)
-                                    {
-                                        that.counters.totalOriginalShared += 1;
-
-                                        console.log(results[i].get("entities_urls"));
-                                    }
-                                }
+                                that.countMentioned(results[i]);
+                                that.countReplied(results[i]);
+                                that.countSharedTwitter(results[i]);
+                                that.countSharedOther(results[i]);
                             }
                         }
 
@@ -778,15 +770,57 @@ Twitter.prototype = {
                 return doQuery(0);
 
             }).then(function () {
-                console.log("Replied: " + that.counters.totalReplied);
-                console.log("Mentioned: " + that.counters.totalMetioned);
-                console.log("Original Mentioned(Not Retweet): " + that.counters.totalOriginalMetioned);
-                console.log("Original Shared(Not Retweet): " + that.counters.totalOriginalShared);
-                console.log("Shared: " + that.counters.totalShared);
-                console.log("------------------------------");
+                //console.log("Replied: " + that.counters.totalReplied);
+                //console.log("Mentioned: " + that.counters.totalMetioned);
+                //console.log("Original Mentioned(Not Retweet): " + that.counters.totalOriginalMetioned);
+                //console.log("Original Shared Other(Not Retweet): " + that.counters.totalOriginalSharedOther);
+                //console.log("Original Shared Twitter(Not Retweet): " + that.counters.totalOriginalSharedTwitter);
+                //console.log("Shared Twitter: " + that.counters.totalSharedTwitter);
+                //console.log("Shared Other: " + that.counters.totalSharedOther);
+                //console.log("------------------------------");
             }); // promise
 
         }); // _.each
+
+        return promise;
+
+    },
+
+    batchSavingRecords: function (data, name) {
+
+        var that = this;
+        var promise = Parse.Promise.as();
+
+        var perBatch = 100;
+            pages = Math.floor(data.length / perBatch);
+
+        pages = (data.length % 100) > 0 ? pages + 1 : pages;
+
+        for (var i = 0 ; i < pages ; i++)
+        {
+            promise = promise.then(function () {
+
+                dataToSave = data.splice(0, perBatch);
+
+                return Parse.Object.saveAll(dataToSave, {
+
+                    success: function (objs) {
+
+                        console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
+
+                    },
+                    error: function (e) {
+
+                        console.log("Saving tweets failed.");
+
+                        return Parse.Promise.as().reject("Saving tweets failed.");
+
+                    }
+
+                });
+
+            });
+        }
 
         return promise;
 
@@ -845,28 +879,13 @@ Twitter.prototype = {
 
                 return Parse.Promise.when(assignIdPromise).then(function () {
 
-                    console.log((new Date().getTime() / 1000) + " In Saving.");
+                    return Parse.Promise.when(that.batchSavingRecords(tweets, name)).then(function () {
 
-                    // Perform Saving
-                    return Parse.Object.saveAll(tweets, {
-
-                        success: function (objs) {
-
-                            console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
-
-                        },
-                        error: function (e) {
-
-                            console.log("Saving tweets failed.");
-
-                        }
-
-                    }).then(function (objs) {
                         var logPrototype = Parse.Object.extend("Logs");
 
                         var log = new logPrototype();
 
-                        log.set("saving", objs.length);
+                        log.set("saving", tweets.length);
                         log.set("target", name);
                         log.set("type", "user");
                         log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
@@ -876,6 +895,7 @@ Twitter.prototype = {
                             return Parse.Promise.as(nameIndex + 1);
 
                         });
+
                     });
 
                 });
@@ -888,57 +908,74 @@ Twitter.prototype = {
 
     },
 
+    collectExistedMentioningData: function (name, cratedAt) {
+
+        var that = this;
+
+        var skipStep = 1000;
+
+        var queryCallback = function (length, skip) {
+
+            console.log("In callback: length: " + length + ", skip: " + skip);
+
+            if (length === skipStep) {
+                return doQuery(skip);
+            }
+            else {
+                return Parse.Promise.as();
+            }
+
+        };
+
+        var doQuery = function (skip) {
+            var mentioningPrototype = Parse.Object.extend(that.mentionsTable);
+
+            var query = new Parse.Query(mentioningPrototype);
+
+            var d = new Date(cratedAt);
+            var ts = d.getTime();
+
+            console.log(ts);
+
+            query.lessThanOrEqualTo("createdAt", new Date(ts));
+
+            query.equalTo("mentioning", name);
+
+            query.skip(skip);
+
+            query.limit(skipStep);
+
+            return query.find().then(function (results) {
+
+                for (var i = 0; i < results.length; i++) {
+
+                    that.test.push(results[i]);
+
+                }
+
+                console.log("Current query result: " + results.length);
+
+                skip += results.length;
+
+                return queryCallback(results.length, skip);
+            });
+
+        };
+
+        console.log(cratedAt);
+
+        return doQuery(0);
+
+    },
+
     eliminateDuplicateMentioningIndex: function () {
 
         var that = this;
         var promise = Parse.Promise.as();
-        var skipStep = 1000;
-        //var skipStep = 10;
 
         return promise.then(function () {
 
-            var queryCallback = function (length, skip) {
-
-                console.log("In callback: length: " + length + ", skip: " + skip);
-
-                if (length === skipStep) {
-                    return doQuery(skip);
-                }
-                else {
-                    return Parse.Promise.as();
-                }
-
-            };
-
-            var doQuery = function (skip) {
-                var mentioningPrototype = Parse.Object.extend(that.mentionsTable);
-
-                var query = new Parse.Query(mentioningPrototype);
-
-                query.equalTo("mentioning", "gotynker");
-
-                query.skip(skip);
-
-                query.limit(skipStep);
-
-                return query.find().then(function (results) {
-
-                    for (var i = 0; i < results.length; i++) {
-
-                        that.test.push(results[i]);
-
-                    }
-
-                    console.log("Current query result: " + results.length);
-
-                    skip += results.length;
-
-                    return queryCallback(results.length, skip);
-                });
-
-            };
-
-            return doQuery(0);
+            return that.collectExistedMentioningData("tickleapp");
 
         }).then(function () {
 
@@ -977,41 +1014,203 @@ Twitter.prototype = {
 
         });
 
-    }
-};
+    },
 
-Parse.Cloud.job("test1000", function (request, status) {
+    countMentioned: function (data) {
 
-    Parse.Cloud.useMasterKey();
+        if (data.get("in_reply_to_status_id") == null && data.get("in_reply_to_user_id") == null) {
+            this.counters.totalMetioned += 1;
 
-    var i, tests = [];
+            if (data.get("text").indexOf("RT @") == -1)
+            {
+                this.counters.totalOriginalMetioned += 1;
+            }
+        }
 
-    for (i = 0; i < 3000; i++) {
-        var testingPrototype = Parse.Object.extend("testing");
+    },
 
-        var test = new testingPrototype();
+    countReplied: function (data) {
 
-        test.set("timestamp", (new Date().getTime() / 1000).toString());
+        if (data.get("in_reply_to_status_id") || data.get("in_reply_to_user_id")) {
+            this.counters.totalReplied += 1;
+        }
 
-        tests.push(test);
+    },
 
-        console.log(i);
-    }
+    countSharedTwitter: function (data) {
 
-    console.log("Start saving.");
+        // Calculate medias shared with Twitter Webapp
+        if (data.get("entities_media")) {
+            this.counters.totalSharedTwitter += 1;
 
-    Parse.Object.saveAll(tests, {
-        success: function (objs) {
-            console.log('Saving success ' + objs.length);
-        },
-        error: function (e) {
+            if (data.get("text").indexOf("RT @") == -1)
+            {
+                this.counters.totalOriginalSharedTwitter += 1;
+            }
+        }
+
+    },
+
+    countSharedOther: function (data) {
+
+        // Calculate medias shared with other services
+        var urlsStr = typeof data.get("entities_urls") != "undefined" ? data.get("entities_urls") : "[]";
+        var urls = JSON.parse(urlsStr);
+        var b_mediaCounted = false;
+
+        for (var url_i = 0; url_i < urls.length; url_i++)
+        {
+            if (urls[url_i].expanded_url.indexOf("youtube.com") >= 0 ||
+                urls[url_i].expanded_url.indexOf("youtu.be")        >= 0 ||
+                urls[url_i].expanded_url.indexOf("instagram.com")   >= 0 ||
+                urls[url_i].expanded_url.indexOf("youtu.be")        >= 0 ||
+                urls[url_i].expanded_url.indexOf("vimeo.com")       >= 0 ||
+                urls[url_i].expanded_url.indexOf("vine.co")         >= 0 ) {
+
+                this.counters.totalSharedOther += 1;
+
+                if (data.get("text").indexOf("RT @") == -1)
+                {
+                    this.counters.totalOriginalSharedOther += 1;
+                }
+            }
+
+            // Backward Compatible: some of the "entities_media" was stored in "entities_urls" column... It was previous mistake
+            if (urls[url_i].type && !b_mediaCounted)
+            {
+                this.counters.totalSharedTwitter += 1;
+
+                if (data.get("text").indexOf("RT @") == -1)
+                {
+                    this.counters.totalOriginalSharedTwitter += 1;
+                }
+
+                // Count only once for multiple images/videos
+                b_mediaCounted = true;
+            }
 
         }
-    });
-});
 
+    },
 
-Parse.Cloud.job("mentioning", function (request, status) {
+    fetchUserTimelineData: function (name) {
+
+        var that = this;
+
+        var timelinePrototype = Parse.Object.extend(that.timelineTable);
+        var query = new Parse.Query(timelinePrototype);
+
+        var d = new Date("September 29, 2015");
+        var ts = d.getTime();
+
+        query.greaterThanOrEqualTo("createdAt", new Date(ts));
+        query.equalTo("screen_name", name);
+
+        return query.find().then(function (results) {
+
+            var params = {
+                k: 0,
+                name: name
+            };
+
+            var promise = Parse.Promise.as(params);
+
+            for (var i = 0 ; i < results.length ; i++)
+            {
+                promise = promise.then(function (params) {
+
+                    var cratedAt = results[params.k].get("createdAt");
+
+                    // Reset query data
+                    that.test = [];
+
+                    return that.collectExistedMentioningData(name, cratedAt).then(function () {
+
+                        var data = that.test;
+
+                        var timeline = new timelinePrototype;
+
+                        // Reset all counters
+                        for (var key in that.counters) {
+                            that.counters[key] = 0;
+                        }
+
+                        // Copy Timeline Object
+                        timeline.set("objectId", results[params.k].id);
+
+                        console.log(timeline.id);
+
+                        for (var j = 0 ; j < data.length ; j++)
+                        {
+                            if (data[j].get("user_screen_name") != params.name)
+                            {
+                                that.countMentioned(data[j]);
+                                that.countReplied(data[j]);
+                                that.countSharedTwitter(data[j]);
+                                that.countSharedOther(data[j]);
+                            }
+
+                        }
+
+                        timeline.set("mentioned", that.counters.totalMetioned);
+                        timeline.set("original_mentioned", that.counters.totalOriginalMetioned);
+                        timeline.set("replied", that.counters.totalReplied);
+                        timeline.set("shared_twitter", that.counters.totalSharedTwitter);
+                        timeline.set("shared_other", that.counters.totalSharedOther);
+                        timeline.set("original_shared_twitter", that.counters.totalOriginalSharedTwitter);
+                        timeline.set("original_shared_other", that.counters.totalOriginalSharedOther);
+
+                        return timeline.save().then(function () {
+
+                            params.k = params.k + 1;
+
+                            return Parse.Promise.as(params);
+
+                        });
+
+                    });
+
+                });
+
+            }
+
+            return promise;
+        });
+
+    },
+
+    fetchUsersTimelineData: function () {
+
+        var that = this;
+
+        var promise = Parse.Promise.as();
+
+        _.each(that.screenNames, function (screenName) {
+
+            promise = promise.then(function () {
+
+                // Reset all counters
+                for (var key in that.counters) {
+                    that.counters[key] = 0;
+                }
+
+                console.log((new Date().getTime() / 1000) + " ScreenName: " + screenName);
+
+                return that.fetchUserTimelineData(screenName).then(function () {
+                    return Parse.Promise.as();
+                });
+
+            }); // promise
+
+        }); // _.each
+
+        return promise;
+
+    }
+
+};
+
+Parse.Cloud.job("printMentioning", function (request, status) {
 
     Parse.Cloud.useMasterKey();
 
@@ -1036,10 +1235,6 @@ Parse.Cloud.job("mentioning", function (request, status) {
         }
     );
 
-
-    // Parsing Procedure
-    Parse.Promise.when();
-
     // Parsing Procedure
     Parse.Promise.when(
 
@@ -1053,6 +1248,43 @@ Parse.Cloud.job("mentioning", function (request, status) {
 
 });
 
+Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
+
+    Parse.Cloud.useMasterKey();
+
+    var twitterParser = new Twitter(
+        {
+            tableName: "user_status",
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+
+            consumerSecret     : request.params.consumerSecret,
+            oauth_consumer_key : request.params.oauth_consumer_key,
+            tokenSecret        : request.params.tokenSecret,
+            oauth_token        : request.params.oauth_token,
+
+            mentionsTable: "metioning_history",
+            timelineTable: "twitter_user_timeline",
+
+            tweetsPerPage: 200,
+            tweetsPerSearchPage: 100,
+            maxQueryTweets: 3200
+        }
+    );
+
+    // Parsing Procedure
+    Parse.Promise.when(
+
+        twitterParser.performScreenNamesLookup()
+
+    ).then(function () {
+
+        return twitterParser.fetchUsersTimelineData();
+
+    });
+
+});
+
+
 Parse.Cloud.job("twitterParser", function (request, status) {
 
     Parse.Cloud.useMasterKey();
@@ -1061,7 +1293,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
         {
             tableName: "user_status",
             screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            //screenNames: ["tickleapp"],
+            //screenNames: ["tickleapp", "gotynker"],
             //screenNames: ["bblurock"],
 
             consumerSecret     : request.params.consumerSecret,
@@ -1078,6 +1310,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
         }
     );
 
+    twitterParser.status = status;
+
 
     // Parsing Procedure
     Parse.Promise.when(
@@ -1093,12 +1327,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
         }).then(function () {
 
             console.log((new Date().getTime() / 1000) + " Finished performUserTweetsAnalytics.");
-
-            return Parse.Promise.when(twitterParser.savingTweetsOnParse());
-
-        }).then(function () {
-
-            console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
 
             return Parse.Promise.when(twitterParser.performMentioningSearch("forward"));
 
@@ -1124,6 +1352,12 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             console.log((new Date().getTime() / 1000) + " Finished savingUserTimelineStatus.");
 
+            return Parse.Promise.when(twitterParser.savingTweetsOnParse());
+
+        }).then(function () {
+
+            console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
+
             status.success("Job Done!");
 
         });
@@ -1138,7 +1372,7 @@ Parse.Cloud.job("parseTweetsFromSearchApi", function (request, status) {
         {
             tableName: "user_status",
             //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames        : ["gotynker"],
+            screenNames        : ["trinketapp"],
 
             consumerSecret     : request.params.consumerSecret,
             oauth_consumer_key : request.params.oauth_consumer_key,

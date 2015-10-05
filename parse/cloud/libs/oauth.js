@@ -71,6 +71,7 @@
    Another option is to call exports.correctTimestamp with a Unix timestamp.
  */
 var sha = require('cloud/libs/sha1.js');
+//var sha = require('./sha1.js');
 var exports; if (exports == null) exports = {};
 
 exports.setProperties = function setProperties(into, from) {
@@ -540,8 +541,8 @@ exports.SignatureMethod.registerMethodClass(["HMAC-SHA1", "HMAC-SHA1-Accessor"],
     exports.SignatureMethod.makeSubclass(
         function getSignature(baseString) {
             b64pad = '=';
-            console.log("Key: "+this.key);
-            console.log("BaseString: "+baseString);
+            //console.log("Key: "+this.key);
+            //console.log("BaseString: "+baseString);
             var signature = sha.b64_hmac_sha1(this.key, baseString);
             return signature;
         }

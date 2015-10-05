@@ -1,0 +1,19 @@
+{
+  "name": "tickle-dashboard",
+  "version": "1.0.0",
+  "description": "The cloud code for parse focusing on crawling the information of Tickleapp and its opponent daily.",
+  "main": "cloud/main.js",
+
+  "private": true,
+  "scripts": {
+    "start": "./node_modules/.bin/parse-cloudcode-runner twitterParser -t job"
+  },
+
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "parse-cloudcode-runner": "0.0.5",
+    "underscore": "^1.8.3",
+    "dotenv": "^1.2.0"
+  }
+}

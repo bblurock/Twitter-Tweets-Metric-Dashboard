@@ -1,2 +1,3 @@
 .parse.local
 config/global.json
+node_modules
