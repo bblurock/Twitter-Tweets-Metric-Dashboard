@@ -1305,8 +1305,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
-            tokenSecret        : process.env.OAUTH_TOKEN,
-            oauth_token        : process.env.COMSUMER_SECRET,
+            tokenSecret        : process.env.COMSUMER_SECRET,
+            oauth_token        : process.env.OAUTH_TOKEN,
 
             mentionsTable: "metioning_history",
             timelineTable: "twitter_user_timeline",
