@@ -882,13 +882,28 @@ Twitter.prototype = {
 
                 return Parse.Promise.when(assignIdPromise).then(function () {
 
-                    return Parse.Promise.when(that.batchSavingRecords(tweets, name)).then(function () {
+                    console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
+                    // Perform Saving
+                    return Parse.Object.saveAll(tweets, {
+
+                        success: function (objs) {
+
+                            console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
+
+                        },
+                        error: function (e) {
+
+                            console.log("Saving tweets failed.");
+
+                        }
+
+                    }).then(function (objs) {
                         var logPrototype = Parse.Object.extend("Logs");
 
                         var log = new logPrototype();
 
-                        log.set("saving", tweets.length);
+                        log.set("saving", objs.length);
                         log.set("target", name);
                         log.set("type", "user");
                         log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
@@ -898,10 +913,9 @@ Twitter.prototype = {
                             return Parse.Promise.as(nameIndex + 1);
 
                         });
-
                     });
 
-                });
+                }); // promise
 
             }); // promise
 
