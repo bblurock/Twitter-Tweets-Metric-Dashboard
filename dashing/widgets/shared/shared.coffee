@@ -1,4 +1,4 @@
-class Dashing.Mentioned extends Dashing.Widget
+class Dashing.Shared extends Dashing.Widget
 
   ready: ->
     ###*
@@ -137,8 +137,8 @@ class Dashing.Mentioned extends Dashing.Widget
     Highcharts.setOptions Highcharts.theme
 
   createChart: (seriesOptions) ->
-    $('#mentioned').highcharts 'StockChart',
-      title: text: 'Daily Mentioned Count'
+    $('#shared').highcharts 'StockChart',
+      title: text: 'Daily Original Shared Count<br/>(by Twitter Webapp)'
       legend: enabled: true
       # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
       rangeSelector: selected: 4

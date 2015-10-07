@@ -152,7 +152,8 @@ class Dashing.Favorited extends Dashing.Widget
           value: 0
           width: 1
           color: 'silver'
-        } ] 
+        } ]
+        min: 0
       plotOptions:
         series:
           lineWidth: 1
@@ -162,7 +163,7 @@ class Dashing.Favorited extends Dashing.Widget
             enabled: true
       
       tooltip:
-        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'
+        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.y}<br/>'
         valueDecimals: 0
       series: seriesOptions
     return

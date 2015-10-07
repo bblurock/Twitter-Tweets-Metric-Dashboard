@@ -3,7 +3,7 @@ class Dashing.Followers extends Dashing.Widget
   createChart: (data) ->
     $('#followers').highcharts 'StockChart',
       # chart: type: 'spline'
-      title: text: 'Daily Growth Followers'
+      title: text: 'Daily Followers Growth'
       legend: 
         enabled: true
       # subtitle: text: 'This chart display the new fllowers amount gained by each account'
@@ -25,7 +25,7 @@ class Dashing.Followers extends Dashing.Widget
       series:
         data
       tooltip:
-        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'
+        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.y}<br/>'
     return
     
   onData: (data) ->
