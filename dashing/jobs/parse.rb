@@ -3,6 +3,8 @@ require 'json'
 require 'rest-client'
 require 'pp'
 
+ENV['TZ']='Asia/Taipei'
+
 def groupDataByDate(data)
     data.sort! {|x, y| x[0].to_i<=>y[0].to_i}
         
