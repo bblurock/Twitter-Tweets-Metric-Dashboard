@@ -6,10 +6,6 @@
 #= require_tree ../../widgets
 #= require highstock/highstock.js
 #= require highstock/modules/exporting.js
-#= require amstockchart_3.17.1/amcharts/amcharts.js
-#= require amstockchart_3.17.1/amcharts/serial.js
-#= require amstockchart_3.17.1/amcharts/themes/dark.js
-#= require amstockchart_3.17.1/amcharts/amstock.js
 
 console.log("Yeah! The dashboard has started!")
 

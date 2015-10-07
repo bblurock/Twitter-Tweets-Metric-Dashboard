@@ -146,7 +146,7 @@ def sendParseDataset
     
 end
 
-SCHEDULER.every '120s' do
+SCHEDULER.every '120s', :first_in => 0 do |job|
     sendParseDataset
     # send_event('followers',  { data: followerChartData.to_json})
 end

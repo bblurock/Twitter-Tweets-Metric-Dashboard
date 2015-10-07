@@ -25,7 +25,7 @@ class Dashing.Followers extends Dashing.Widget
       series:
         data
       tooltip:
-        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.x:%e. %b}: {point.y:.2f}<br/>'
+        pointFormat: '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'
     return
     
   onData: (data) ->
