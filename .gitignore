@@ -58,3 +58,7 @@ target/
 .idea/
 .DS_Store
 .elasticbeanstalk/
+
+# DashBoard
+dashing/vendor/
+parse/node_modules/
