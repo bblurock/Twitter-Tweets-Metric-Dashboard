@@ -141,7 +141,10 @@ class Dashing.Retweeted extends Dashing.Widget
       title: text: 'Daily Retweeted Count'
       legend: enabled: true
       # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
-      rangeSelector: selected: 4
+      rangeSelector:
+        selected: 4
+        allButtonsEnabled: true
+        enable: true
       legend: enabled: true
       yAxis:
 #        min: 500

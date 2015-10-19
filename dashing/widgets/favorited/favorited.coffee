@@ -141,8 +141,11 @@ class Dashing.Favorited extends Dashing.Widget
       title: text: 'Daily Favorited Count'
       legend: enabled: true
       # subtitle: text: 'This chart display the number of times which their tweets be Favorited by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
-      rangeSelector: selected: 4
       legend: enabled: true
+      rangeSelector:
+        selected: 4
+        allButtonsEnabled: true
+        enable: true
       yAxis:
 #        min: 500
 #        max: 80000

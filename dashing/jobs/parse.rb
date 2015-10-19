@@ -43,11 +43,26 @@ def sendParseDataset
                           :api_key        => "S6uiQbnW4fhJVnVfnKM84vIqzu5M6z59rWXNQhaE", # required
                           :quiet          => false  # optional, defaults to false
 
-    timeline = client.query("twitter_user_timeline").tap do |q|
-    q.order_by = "createdAt"
-    q.order = :descending
-    q.limit = 1000
-    end.get
+    timeline = Array.new
+    skip = 0
+
+    loop do
+
+      page = client.query("twitter_user_timeline").tap do |q|
+          q.order_by = "createdAt"
+          q.order = :descending
+          q.skip = skip
+          q.limit = 1000
+      end.get
+
+      timeline += page
+
+      skip += page.length
+
+      break if page.length == 0
+    end
+
+    pp timeline.length
     
     retweetedTimeline = Hash.new
     favoriteTimeLine = Hash.new
@@ -155,6 +170,8 @@ def sendParseDataset
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         followerChartData.push hash
     end
+
+#     puts followerChartData;
     
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
@@ -164,7 +181,7 @@ def sendParseDataset
     
 end
 
-SCHEDULER.every '120s', :first_in => 0 do |job|
+SCHEDULER.every '180s', :first_in => 0 do |job|
     sendParseDataset
     # send_event('followers',  { data: followerChartData.to_json})
 end

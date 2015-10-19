@@ -7,6 +7,10 @@ class Dashing.Followers extends Dashing.Widget
       legend: 
         enabled: true
       # subtitle: text: 'This chart display the new fllowers amount gained by each account'
+      rangeSelector:
+        selected: 4
+        allButtonsEnabled: true
+        enable: true
       xAxis:
         type: 'datetime'
         dateTimeLabelFormats:
