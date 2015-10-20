@@ -1395,7 +1395,15 @@ Parse.Cloud.job("twitterParser", function (request, status) {
             // Clear Keep alive setting
             clearInterval(that.interval);
             process.exit();
-        });
+        },
+
+        // Top Level error catch
+        function() {
+            // Clear Keep alive setting
+            clearInterval(that.interval);
+            process.exit();
+        }
+    );
 
 });
 
