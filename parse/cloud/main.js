@@ -1,11 +1,11 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
+var server = require('express');
 
 if (typeof Parse === 'undefined') {
     var Parse = require('parse-cloudcode-runner').Parse;
     Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
 }
-
 
 var Twitter = function (params) {
 
@@ -1300,12 +1300,12 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
     Parse.Cloud.useMasterKey();
 
+    var that = this;
+
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
             screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            //screenNames: ["tickleapp", "gotynker"],
-            //screenNames: ["bblurock"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
@@ -1323,6 +1323,27 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
     twitterParser.status = status;
 
+    that.server = server();
+
+    // Set simple get api
+    that.server.get('/', function (req, res) {
+        res.send('Keep alive');
+    });
+
+    that.server.listen(8888);
+
+    that.interval = setInterval(function() {
+
+        return Parse.Cloud.httpRequest({
+            method: "GET",
+            url: "http://localhost:8888"
+        }).then(function(httpResponse) {
+
+            console.log((new Date().getTime() / 1000) + " Keep Alive ping.");
+
+        });
+
+    }, 30000);
 
     // Parsing Procedure
     Parse.Promise.when(
@@ -1371,6 +1392,9 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             status.success("Job Done!");
 
+            // Clear Keep alive setting
+            clearInterval(that.interval);
+            process.exit();
         });
 
 });
