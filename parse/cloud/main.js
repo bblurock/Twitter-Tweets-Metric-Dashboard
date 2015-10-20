@@ -885,20 +885,10 @@ Twitter.prototype = {
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
                     // Perform Saving
-                    return Parse.Object.saveAll(tweets, {
+                    return that.batchSavingRecords(tweets, name).then(function (objs) {
 
-                        success: function (objs) {
+                        //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
-                            console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
-
-                        },
-                        error: function (e) {
-
-                            console.log("Saving tweets failed.");
-
-                        }
-
-                    }).then(function (objs) {
                         var logPrototype = Parse.Object.extend("Logs");
 
                         var log = new logPrototype();
@@ -913,6 +903,10 @@ Twitter.prototype = {
                             return Parse.Promise.as(nameIndex + 1);
 
                         });
+                    }, function (e) {
+
+                        console.log("Saving tweets failed.");
+
                     });
 
                 }); // promise
