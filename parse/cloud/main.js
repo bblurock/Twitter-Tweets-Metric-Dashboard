@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
-var server = require('express');
 
 if (typeof Parse === 'undefined') {
     var Parse = require('parse-cloudcode-runner').Parse;
@@ -1323,28 +1322,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
     twitterParser.status = status;
 
-    that.server = server();
-
-    // Set simple get api
-    that.server.get('/', function (req, res) {
-        res.send('Keep alive');
-    });
-
-    that.server.listen(8888);
-
-    that.interval = setInterval(function() {
-
-        return Parse.Cloud.httpRequest({
-            method: "GET",
-            url: "http://localhost:8888"
-        }).then(function(httpResponse) {
-
-            console.log((new Date().getTime() / 1000) + " Keep Alive ping.");
-
-        });
-
-    }, 30000);
-
     // Parsing Procedure
     Parse.Promise.when(
 
@@ -1392,18 +1369,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             status.success("Job Done!");
 
-            // Clear Keep alive setting
-            clearInterval(that.interval);
-            process.exit();
-        },
-
-        // Top Level error catch
-        function() {
-            // Clear Keep alive setting
-            clearInterval(that.interval);
-            process.exit();
-        }
-    );
+        });
 
 });
 
