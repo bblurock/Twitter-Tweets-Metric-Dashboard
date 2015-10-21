@@ -794,32 +794,36 @@ Twitter.prototype = {
         var promise = Parse.Promise.as();
 
         var perBatch = 100;
-            pages = Math.floor(data.length / perBatch);
 
+        pages = Math.floor(data.length / perBatch);
         pages = (data.length % 100) > 0 ? pages + 1 : pages;
 
         for (var i = 0 ; i < pages ; i++)
         {
             promise = promise.then(function () {
+                var spliceAmount = data.length > perBatch ? perBatch : data.length;
 
-                dataToSave = data.splice(0, perBatch);
+                console.log("Before Splice: " + data.length);
 
-                return Parse.Object.saveAll(dataToSave, {
+                var dataToSave = data.splice(0, spliceAmount);
 
-                    success: function (objs) {
+                console.log("After Splice: " + data.length);
+
+                return Parse.Object.saveAll(dataToSave).then(
+                    function (objs) {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
-                    },
-                    error: function (e) {
+                        return Parse.Promise.as(objs.length);
 
-                        console.log("Saving tweets failed.");
+                    },
+                    function (e) {
+
+                        console.log(JSON.stringify(e));
 
                         return Parse.Promise.as().reject("Saving tweets failed.");
 
-                    }
-
-                });
+                    });
 
             });
         }
@@ -884,7 +888,7 @@ Twitter.prototype = {
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
                     // Perform Saving
-                    return that.batchSavingRecords(tweets, name).then(function (objs) {
+                    return that.batchSavingRecords(tweets, name).then(function (length) {
 
                         //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
@@ -892,7 +896,7 @@ Twitter.prototype = {
 
                         var log = new logPrototype();
 
-                        log.set("saving", objs.length);
+                        log.set("saving", length);
                         log.set("target", name);
                         log.set("type", "user");
                         log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
@@ -1252,9 +1256,9 @@ Parse.Cloud.job("printMentioning", function (request, status) {
 
     ).then(function () {
 
-        return twitterParser.calculatingMentioning()
+            return twitterParser.calculatingMentioning()
 
-    });
+        });
 
 });
 
@@ -1288,9 +1292,9 @@ Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
 
     ).then(function () {
 
-        return twitterParser.fetchUsersTimelineData();
+            return twitterParser.fetchUsersTimelineData();
 
-    });
+        });
 
 });
 
