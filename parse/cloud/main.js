@@ -718,7 +718,7 @@ Twitter.prototype = {
                     that.counters[key] = 0;
                 }
 
-                console.log("\n\n" + (new Date().getTime() / 1000) + " ScreenName: " + screenName);
+                console.log((new Date().getTime() / 1000) + " calculatingMentioning ScreenName: " + screenName);
 
                 var queryCallback = function (length, skip) {
 
@@ -751,6 +751,7 @@ Twitter.prototype = {
 
                     return query.find().then(function (results) {
 
+                        console.log("mentioning result: " + results.length)
                         for (var i = 0; i < results.length; i++) {
 
                             if (results[i].get("user_screen_name") != screenName)
@@ -1308,7 +1309,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["tickleapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
