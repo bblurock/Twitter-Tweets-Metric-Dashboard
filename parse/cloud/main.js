@@ -815,6 +815,11 @@ Twitter.prototype = {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
+                        setTimeout(function()
+                        {
+                            console.log("Timeout 10s");
+                        }, 10000);
+
                         return Parse.Promise.as(objs.length);
 
                     },
