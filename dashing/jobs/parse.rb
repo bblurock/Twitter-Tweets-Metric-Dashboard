@@ -7,7 +7,7 @@ ENV['TZ']='Asia/Taipei'
 
 def groupDataByDate(data)
     data.sort! {|x, y| x[0].to_i<=>y[0].to_i}
-        
+
     # Convert accumlated data into differentiated data
     diff = Array.new
     data.each_index { |i|
@@ -17,7 +17,7 @@ def groupDataByDate(data)
             diff.push [data[i][0], 0]
         end
     }
-    
+
     # Grouping by date
     group = Hash.new
     diff.each do |ts, data|
@@ -27,14 +27,136 @@ def groupDataByDate(data)
         end
         group[timeStr] = group[timeStr] + data
     end
-    
+
     # Format grouping data
     result = Array.new
     group.each do |dateKey, num|
-        result.push [DateTime.parse(dateKey).to_time.to_i * 1000, num] 
+        result.push [DateTime.parse(dateKey).to_time.to_i * 1000, num]
     end
-    
+
     result
+end
+
+def getTimelineData(client, table)
+    result = Array.new
+    skip = 0
+
+    maxCreatedAtTime = 0;
+
+    loop do
+
+      page = client.query(table).tap do |q|
+          q.order_by = "createdAt"
+          q.order = :descending
+          q.limit = 1000
+
+          if maxCreatedAtTime != 0
+              q.less_than("createdAt", maxCreatedAtTime)
+          end
+      end.get
+
+      result += page
+
+      if page.length != 0
+        maxCreatedAtTime = page[page.length - 1]["createdAt"]
+      end
+
+      break if page.length == 0
+    end
+
+    result
+end
+
+def claculateShared(tweets)
+
+    sharedArray = Hash.new
+    groupedSharedArray = Array.new
+
+    for tweet in tweets
+        name = tweet["mentioning"]
+        timestamp = DateTime.parse(tweet["created_at"]).to_time.to_i * 1000
+        timeStr = Time.at(timestamp/1000).to_datetime.strftime "%Y-%m-%d"
+
+        # Init non-existing screen_name
+        if !sharedArray.include? name
+            sharedArray[name] = Hash.new
+        end
+
+        # Init grouping by Date
+        if !sharedArray[name].include? timeStr
+            sharedArray[name][timeStr] = 0
+        end
+
+        if !tweet["entities_media"].nil? && !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
+            sharedArray[name][timeStr] += 1
+        end
+
+    end
+
+    # Format grouping data
+    sharedArray.each do |key, array|
+        result = Array.new
+
+        array.each do |dateKey, num|
+            result.push [DateTime.parse(dateKey).to_time.to_i * 1000, num]
+        end
+
+        # Sorting timestamp
+        result.sort! {|x, y| x[0].to_i<=>y[0].to_i}
+
+        hash = {"name"=>key, "data"=>result}
+
+        groupedSharedArray.push hash
+    end
+
+    groupedSharedArray
+
+end
+
+def claculateMentioned(tweets)
+
+    mentionedArray = Hash.new
+    groupedMentionedArray = Array.new
+
+    for tweet in tweets
+        name = tweet["mentioning"]
+        timestamp = DateTime.parse(tweet["created_at"]).to_time.to_i * 1000
+        timeStr = Time.at(timestamp/1000).to_datetime.strftime "%Y-%m-%d"
+
+        # Init non-existing screen_name
+        if !mentionedArray.include? name
+            mentionedArray[name] = Hash.new
+        end
+
+        # Init grouping by Date
+        if !mentionedArray[name].include? timeStr
+            mentionedArray[name][timeStr] = 0
+        end
+
+        if !tweet["in_reply_to_status_id"].nil? && !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
+            mentionedArray[name][timeStr] += 1
+        end
+
+    end
+
+    # Format grouping data
+    mentionedArray.each do |key, array|
+        result = Array.new
+
+        array.each do |dateKey, num|
+            result.push [DateTime.parse(dateKey).to_time.to_i * 1000, num]
+        end
+
+        # Sorting timestamp
+        result.sort! {|x, y| x[0].to_i<=>y[0].to_i}
+
+        hash = {"name"=>key, "data"=>result}
+
+        groupedMentionedArray.push hash
+    end
+
+    groupedMentionedArray
+
 end
 
 def sendParseDataset
@@ -44,58 +166,48 @@ def sendParseDataset
                           :quiet          => false  # optional, defaults to false
 
     timeline = Array.new
-    skip = 0
+    tweets = Array.new
 
-    loop do
+    # Get Data from Parse.com
+    tweets = getTimelineData(client, "metioning_history")
+    groupedMentionedArray = claculateMentioned(tweets)
+    groupedSharedArray = claculateShared(tweets)
 
-      page = client.query("twitter_user_timeline").tap do |q|
-          q.order_by = "createdAt"
-          q.order = :descending
-          q.skip = skip
-          q.limit = 1000
-      end.get
+    # Get Data from Parse.com
+    timeline = getTimelineData(client, "twitter_user_timeline")
 
-      timeline += page
-
-      skip += page.length
-
-      break if page.length == 0
-    end
-
-    pp timeline.length
-    
     retweetedTimeline = Hash.new
     favoriteTimeLine = Hash.new
     mentionedTimeline = Hash.new
     sharedTwitterTimeline = Hash.new
     sharedOtherTimeline = Hash.new
     followers = Hash.new
-    
+
     retweetedChartData = Array.new
     favoritedChartData = Array.new
     mentionedChartData = Array.new
     sharedTwitterChartData = Array.new
     sharedOtherChartData = Array.new
     followerChartData = Array.new
-    
+
     # Grouping data by "screen_name"
     for record in timeline
-    
+
         name = record["screen_name"]
         timestamp = DateTime.parse(record["createdAt"]).to_time.to_i * 1000
-    
+
         if !retweetedTimeline.include? name
             retweetedTimeline[name] = []
         end
-    
+
         if !favoriteTimeLine.include? name
             favoriteTimeLine[name] = []
         end
-        
+
         if !mentionedTimeline.include? name
             mentionedTimeline[name] = []
         end
-        
+
         if !sharedTwitterTimeline.include? name
             sharedTwitterTimeline[name] = []
         end
@@ -103,27 +215,27 @@ def sendParseDataset
         if !sharedOtherTimeline.include? name
             sharedOtherTimeline[name] = []
         end
-        
+
         if !followers.include? name
             followers[name] = []
         end
-        
-    
+
+
         if record["retweeted"] && record["retweeted"] != 0
             retweeted = record["retweeted"]
             retweetedTimeline[name].push [timestamp, retweeted]
         end
-        
+
         if record["favorited"] && record["favorited"] != 0
             favorited = record["favorited"]
             favoriteTimeLine[name].push [timestamp, favorited]
         end
-        
+
         if record["original_mentioned"] && record["original_mentioned"] != 0
             mentioned = record["original_mentioned"]
             mentionedTimeline[name].push [timestamp, mentioned]
         end
-        
+
         if record["original_shared_twitter"] && record["original_shared_twitter"] != 0
             shared = record["original_shared_twitter"]
             sharedTwitterTimeline[name].push [timestamp, shared]
@@ -133,29 +245,29 @@ def sendParseDataset
             shared = record["original_shared_twitter"]
             sharedOtherTimeline[name].push [timestamp, shared]
         end
-        
+
         if record["followers"] && record["followers"] != 0
             follower = record["followers"]
             followers[name].push [timestamp, follower]
         end
-        
+
     end
-    
+
     retweetedTimeline.each do |key, array|
-        hash = {"name"=>key, "data"=>(groupDataByDate array)}       
-        retweetedChartData.push hash 
+        hash = {"name"=>key, "data"=>(groupDataByDate array)}
+        retweetedChartData.push hash
     end
-    
+
     favoriteTimeLine.each do |key, array|
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         favoritedChartData.push hash
     end
-    
+
     mentionedTimeline.each do |key, array|
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         mentionedChartData.push hash
     end
-    
+
     sharedTwitterTimeline.each do |key, array|
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         sharedTwitterChartData.push hash
@@ -165,20 +277,20 @@ def sendParseDataset
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         sharedOtherChartData.push hash
     end
-    
+
     followers.each do |key, array|
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         followerChartData.push hash
     end
 
 #     puts followerChartData;
-    
+
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
-    send_event('mentioned',  { data: mentionedChartData.to_json })
+    send_event('mentioned',  { data: groupedMentionedArray.to_json })
     send_event('followers',  { data: followerChartData.to_json })
-    send_event('shared',     { data: sharedTwitterChartData.to_json })
-    
+    send_event('shared',     { data: groupedSharedArray.to_json })
+
 end
 
 SCHEDULER.every '180s', :first_in => 0 do |job|
