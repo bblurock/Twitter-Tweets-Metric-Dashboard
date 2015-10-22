@@ -1,9 +1,13 @@
 var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
 
+
 if (typeof Parse === 'undefined') {
     var Parse = require('parse-cloudcode-runner').Parse;
+    var _parse = require("parse/node");
+
     Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+    _parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
 }
 
 var Twitter = function (params) {
@@ -797,7 +801,7 @@ Twitter.prototype = {
         var perBatch = 100;
 
         pages = Math.floor(data.length / perBatch);
-        pages = (data.length % 100) > 0 ? pages + 1 : pages;
+        pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
 
         for (var i = 0 ; i < pages ; i++)
         {
@@ -810,15 +814,10 @@ Twitter.prototype = {
 
                 console.log("After Splice: " + data.length);
 
-                return Parse.Object.saveAll(dataToSave).then(
+                return _parse.Object.saveAll(dataToSave).then(
                     function (objs) {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
-
-                        setTimeout(function()
-                        {
-                            console.log("Timeout 10s");
-                        }, 10000);
 
                         return Parse.Promise.as(objs.length);
 
@@ -840,7 +839,7 @@ Twitter.prototype = {
 
     savingTweetsOnParse: function () {
 
-        var tweetsPrototype = Parse.Object.extend("Tweets");
+        var tweetsPrototype = _parse.Object.extend("Tweets");
         var that = this;
         var promise = Parse.Promise.as(0);
         var n;
@@ -1308,13 +1307,15 @@ Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
 Parse.Cloud.job("twitterParser", function (request, status) {
 
     Parse.Cloud.useMasterKey();
+    _parse.Cloud.useMasterKey();
 
     var that = this;
 
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["tickleapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
