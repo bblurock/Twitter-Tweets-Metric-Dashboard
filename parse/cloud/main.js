@@ -819,19 +819,15 @@ Twitter.prototype = {
 
                 return _parse.Object.saveAll(dataToSave).then(
                     function (objs) {
-                        
+
                         return _parse.Promise.as(objs.length);
 
-                    },
-                    function (e) {
-
+                    }).then(function(length) {
+                        console.log((new Date().getTime() / 1000) + " Saved " + length + " tweets of " + name);
+                    }, function(e) {
                         console.log(JSON.stringify(e));
 
                         return _parse.Promise.as().reject("Saving tweets failed.");
-
-                    }).then(function(length)
-                    {
-                        console.log((new Date().getTime() / 1000) + " Saved " + length + " tweets of " + name);
                     });
 
             });
