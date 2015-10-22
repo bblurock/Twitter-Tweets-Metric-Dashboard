@@ -897,14 +897,10 @@ Twitter.prototype = {
 
                 return _parse.Promise.when(assignIdPromise).then(function () {
 
+                    console.log((new Date().getTime() / 1000) + " In Saving of " + name);
+
                     // Perform Saving
-                    return _parse.Promise.when(function()
-                    {
-                        console.log((new Date().getTime() / 1000) + " In Saving of " + name);
-
-                        return that.batchSavingRecords(tweets, name);
-
-                    }).then(function (objs) {
+                    return _parse.Promise.when(that.batchSavingRecords(tweets, name)).then(function (objs) {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
