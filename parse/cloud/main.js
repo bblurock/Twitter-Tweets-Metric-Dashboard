@@ -1377,32 +1377,67 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
     _parse.Cloud.useMasterKey();
 
+    var pages, promise;
+
     var testPrototype = _parse.Object.extend("test");
 
     var test = new testPrototype();
 
+    var perBatch = 100;
+
     var batch = [];
-    for (var i = 0; i < 2000 ; i++ )
+
+    for (var i = 0; i < 2999 ; i++ )
     {
 
         var test = new testPrototype();
 
-        test.set("QQ", Date.getTime());
+        test.set("ts", (new Date).getTime());
 
         batch.push(test);
 
     }
 
-    _parse.Object.saveAll(batch).then(
+    pages = Math.floor(batch.length / perBatch);
+    pages = (batch.length % perBatch) > 0 ? pages + 1 : pages;
+
+    promise = _parse.Promise.as(0);
+
+    for(var i = 0; i < pages ; i++)
+    {
+        promise = promise.then(function(k)
+        {
+            var spliceAmount = batch.length > perBatch ? perBatch : batch.length;
+            var dataToSave = batch.splice(0, spliceAmount);
+
+            return _parse.Object.saveAll(dataToSave).then(
+                function(objs)
+                {
+                    console.log("Saved Page. " + k);
+
+                    return _parse.Promise.as(k+1);
+                },
+                function(e)
+                {
+                    console.log(JSON.stringify(e));
+
+                    return promise.reject("Save error");
+                }
+            );
+
+        });
+    };
+
+    _parse.Promise.when(promise).then(
         function()
         {
             console.log("Batch Save success.");
         },
-
         function(e)
         {
             console.log(JSON.stringify(e));
-        });
+        }
+    );
 
 });
 
