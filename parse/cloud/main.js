@@ -797,7 +797,7 @@ Twitter.prototype = {
     batchSavingRecords: function (data, name) {
 
         var that = this;
-        var promise = _parse.Promise.as();
+        var promise = _parse.Promise.as(0);
 
         var perBatch = 100;
 
@@ -806,7 +806,7 @@ Twitter.prototype = {
 
         for (var i = 0 ; i < pages ; i++)
         {
-            promise = promise.then(function () {
+            promise = promise.then(function (k) {
                 var spliceAmount = data.length > perBatch ? perBatch : data.length;
 
                 console.log("Before Splice: " + data.length);
@@ -821,11 +821,17 @@ Twitter.prototype = {
                         return _parse.Promise.as(objs.length);
 
                     }).then(function(length) {
+
                         console.log((new Date().getTime() / 1000) + " Saved " + length + " tweets of " + name);
+
+                        return _parse.Promise.as(k+1);
+
                     }, function(e) {
+
                         console.log(JSON.stringify(e));
 
                         return _parse.Promise.as().reject("Saving tweets failed.");
+
                     });
 
             });
@@ -888,10 +894,14 @@ Twitter.prototype = {
 
                 return _parse.Promise.when(assignIdPromise).then(function () {
 
-                    console.log((new Date().getTime() / 1000) + " In Saving of " + name);
-
                     // Perform Saving
-                    return _parse.Object.saveAll(tweets).then(function (objs) {
+                    return _parse.Promise.when(function()
+                    {
+                        console.log((new Date().getTime() / 1000) + " In Saving of " + name);
+
+                        return that.batchSavingRecords(tweets, name);
+
+                    }).then(function (objs) {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
