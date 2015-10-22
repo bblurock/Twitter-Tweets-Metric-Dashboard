@@ -621,7 +621,7 @@ Twitter.prototype = {
     assignExistedTweetObjectId: function (name) {
 
         var that = this;
-        var tweetsPrototype = Parse.Object.extend("Tweets");
+        var tweetsPrototype = Parse.Object.extend("Test_Tweets");
         var skipStep = 1000;
 
         var queryCallback = function (length, skip) {
