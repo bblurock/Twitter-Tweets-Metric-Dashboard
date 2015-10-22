@@ -804,6 +804,9 @@ Twitter.prototype = {
         pages = Math.floor(data.length / perBatch);
         pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
 
+        console.log((new Date().getTime() / 1000) + " Total Tweets: " + data.length);
+        console.log((new Date().getTime() / 1000) + " Total Pages: " + pages);
+
         for (var i = 0 ; i < pages ; i++)
         {
             promise = promise.then(function (k) {
@@ -1331,8 +1334,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            //screenNames: ["tickleapp"],
+            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["tickleapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
