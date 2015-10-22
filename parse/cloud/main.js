@@ -1392,13 +1392,6 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
     var test = new testPrototype();
 
-    test.set("QQ", 123);
-
-    test.save().then(function()
-    {
-        console.log("Save success.");
-    });
-
     var batch = [];
     for (var i = 0; i < 10 ; i++ )
     {
@@ -1411,9 +1404,17 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
     }
 
-    _parse.Object.saveAll(batch).then(function()
-    {
-        console.log("Batch Save success.");
+    _parse.Object.saveAll(batch, {
+        success: function()
+        {
+            console.log("Batch Save success.");
+        },
+
+        error: function()
+        {
+            console.log("Batch Save Failed.");
+        }
+
     });
 
 });
