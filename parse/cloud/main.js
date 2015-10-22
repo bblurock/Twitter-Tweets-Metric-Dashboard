@@ -1292,8 +1292,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["tickleapp"],
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
@@ -1354,7 +1353,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
         }).then(function () {
 
-            console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
+            console.log((new Date().getTime() / 1000) + " Finished updateTweetsObjectId.");
 
             return _parse.Object.saveAll(twitterParser.tweets, {
                 success: function(objs)
@@ -1368,9 +1367,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
                 {
                     console.log(JSON.stringify(e));
                 }
-            }).then(function()
-            {
-                status.success("Job Done!");
             });
         });
 
