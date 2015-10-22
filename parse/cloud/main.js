@@ -2,15 +2,13 @@ var _ = require('underscore');
 var oauth = require("cloud/libs/oauth.js");
 
 
-if (typeof Parse === 'undefined') {
+if (typeof Parse === 'undefined')
+{
     var Parse = require('parse-cloudcode-runner').Parse;
     var _parse = require("parse/node");
 
-    //Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
-    //_parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
-
-    Parse.initialize('C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8', 'JOltyNQUQm0on6E04QrY2XICKogArMdE5eemQh0h', 'zLCPWgxcnuNR4T10ZLeM8YBbzN6RxAwtUxgt7rcc');
-    _parse.initialize('C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8', 'JOltyNQUQm0on6E04QrY2XICKogArMdE5eemQh0h', 'zLCPWgxcnuNR4T10ZLeM8YBbzN6RxAwtUxgt7rcc');
+    Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+    _parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
 }
 
 var Twitter = function (params) {
@@ -893,7 +891,7 @@ Twitter.prototype = {
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
                     // Perform Saving
-                    return _parse.Object.saveAll(tweets).then(function (obj) {
+                    return _parse.Object.saveAll(tweets).then(function (objs) {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
@@ -901,7 +899,7 @@ Twitter.prototype = {
 
                         var log = new logPrototype();
 
-                        log.set("saving", obj.length);
+                        log.set("saving", objs.length);
                         log.set("target", name);
                         log.set("type", "user");
                         log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
@@ -1323,8 +1321,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["tickleapp"],
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["tickleapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
