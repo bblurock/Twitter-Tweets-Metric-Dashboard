@@ -845,7 +845,7 @@ Twitter.prototype = {
 
     updateTweetsObjectId: function () {
 
-        var tweetsPrototype = _parse.Object.extend("Tweets");
+        var tweetsPrototype = _parse.Object.extend("Test_Tweets");
         var that = this;
         var promise = _parse.Promise.as(0);
         var n;
@@ -1292,7 +1292,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["tickleapp", "wonderworkshop"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
