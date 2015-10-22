@@ -796,7 +796,7 @@ Twitter.prototype = {
     batchSavingRecords: function (data, name) {
 
         var that = this;
-        var promise = Parse.Promise.as();
+        var promise = _parse.Promise.as();
 
         var perBatch = 100;
 
@@ -819,14 +819,14 @@ Twitter.prototype = {
 
                         console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
-                        return Parse.Promise.as(objs.length);
+                        return _parse.Promise.as(objs.length);
 
                     },
                     function (e) {
 
                         console.log(JSON.stringify(e));
 
-                        return Parse.Promise.as().reject("Saving tweets failed.");
+                        return _parse.Promise.as().reject("Saving tweets failed.");
 
                     });
 
@@ -841,7 +841,7 @@ Twitter.prototype = {
 
         var tweetsPrototype = _parse.Object.extend("Tweets");
         var that = this;
-        var promise = Parse.Promise.as(0);
+        var promise = _parse.Promise.as(0);
         var n;
 
         for (n = 0; n < that.screenNames.length; n++) {
@@ -884,11 +884,11 @@ Twitter.prototype = {
                         tweets.push(item);
                     }
 
-                    return Parse.Promise.as();
+                    return _parse.Promise.as();
 
                 });
 
-                return Parse.Promise.when(assignIdPromise).then(function () {
+                return _parse.Promise.when(assignIdPromise).then(function () {
 
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
@@ -897,7 +897,7 @@ Twitter.prototype = {
 
                         //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
-                        var logPrototype = Parse.Object.extend("Logs");
+                        var logPrototype = _parse.Object.extend("Logs");
 
                         var log = new logPrototype();
 
@@ -1397,6 +1397,23 @@ Parse.Cloud.job("testParseSave", function (request, status) {
     test.save().then(function()
     {
         console.log("Save success.");
+    });
+
+    var batch = [];
+    for (var i = 0; i < 10 ; i++ )
+    {
+
+        var test = new testPrototype();
+
+        test.set("QQ", Batch);
+
+        batch.push(test);
+
+    }
+
+    _parse.Object.saveAll(batch).then(function()
+    {
+        console.log("Batch Save success.");
     });
 
 });
