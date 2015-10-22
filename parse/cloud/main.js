@@ -59,6 +59,7 @@ var Twitter = function (params) {
 
     this.data = [];
     this.mentionedTweets = [];
+    this.tweets = [];
     this.test = [];
 
 };
@@ -296,7 +297,7 @@ Twitter.prototype = {
         }
         else {
 
-            console.log("RecordLength: " + this.totalTweets);
+            console.log("RecordLength: " + this.counters.totalTweets);
 
             //console.log((new Date().getTime() / 1000) + " " + JSON.stringify(this.data[screenName]));
 
@@ -816,8 +817,6 @@ Twitter.prototype = {
 
                 var dataToSave = data.splice(0, spliceAmount);
 
-                console.log("After Splice: " + data.length);
-
                 return _parse.Object.saveAll(dataToSave).then(
                     function (objs) {
 
@@ -844,7 +843,7 @@ Twitter.prototype = {
 
     },
 
-    savingTweetsOnParse: function () {
+    updateTweetsObjectId: function () {
 
         var tweetsPrototype = _parse.Object.extend("Tweets");
         var that = this;
@@ -885,55 +884,18 @@ Twitter.prototype = {
                         item.set("screen_name", name);
 
                         //console.log(that.data[name].tweetsDetails[i].favorite_count, that.data[name].tweetsDetails[i].objectId);
-                        //
                         //console.log(item.get("favorite_count"));
 
                         tweets.push(item);
                     }
 
-                    return _parse.Promise.as();
+                    that.tweets = that.tweets.concat(tweets);
+
+                    return _parse.Promise.as(nameIndex+1);
 
                 });
 
-                return _parse.Promise.when(assignIdPromise).then(function () {
-
-                    console.log((new Date().getTime() / 1000) + " In Saving of " + name);
-
-                    // Perform Saving
-                    return _parse.Promise.when(that.batchSavingRecords(tweets, name)).then(function (objs) {
-
-                        console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
-
-                        var logPrototype = _parse.Object.extend("Logs");
-
-                        var log = new logPrototype();
-
-                        log.set("saving", objs.length);
-                        log.set("target", name);
-                        log.set("type", "user");
-                        log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
-
-                        return log.save().then(function () {
-
-                            return Parse.Promise.as(nameIndex + 1);
-
-                        }, function(e)
-                        {
-                            console.log(JSON.stringify(e));
-                            console.log("Saving logs failed.");
-
-                            return Parse.Promise.as().reject();
-                        });
-                    }, function (e) {
-
-                        console.log(JSON.stringify(e));
-                        console.log("Saving tweets failed.");
-
-                        return Parse.Promise.as().reject();
-
-                    });
-
-                }); // promise
+                return assignIdPromise;
 
             }); // promise
 
@@ -1388,14 +1350,28 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             console.log((new Date().getTime() / 1000) + " Finished savingUserTimelineStatus.");
 
-            return Parse.Promise.when(twitterParser.savingTweetsOnParse());
+            return Parse.Promise.when(twitterParser.updateTweetsObjectId());
 
         }).then(function () {
 
             console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
 
-            status.success("Job Done!");
+            _parse.Object.saveAll(that.tweets, {
+                success: function(objs)
+                {
+                    console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
 
+                    return Parse.Promise.as();
+
+                },
+                error: function(e)
+                {
+                    console.log(JSON.stringify(e));
+                }
+            }).then(function()
+            {
+                status.success("Job Done!");
+            });
         });
 
 });
