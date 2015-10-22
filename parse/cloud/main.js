@@ -1356,7 +1356,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             console.log((new Date().getTime() / 1000) + " Finished savingTweetsOnParse.");
 
-            _parse.Object.saveAll(twitterParser.tweets, {
+            return _parse.Object.saveAll(twitterParser.tweets, {
                 success: function(objs)
                 {
                     console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
