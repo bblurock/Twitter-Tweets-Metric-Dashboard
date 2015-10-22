@@ -893,7 +893,7 @@ Twitter.prototype = {
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
                     // Perform Saving
-                    return _parse.Object.saveAll(tweets).then(function (length) {
+                    return _parse.Object.saveAll(tweets).then(function (obj) {
 
                         //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
@@ -901,7 +901,7 @@ Twitter.prototype = {
 
                         var log = new logPrototype();
 
-                        log.set("saving", length);
+                        log.set("saving", obj.length);
                         log.set("target", name);
                         log.set("type", "user");
                         log.set("time", Math.floor((new Date().getTime() / 1000 - beforeSaveTs)).toString());
@@ -910,6 +910,11 @@ Twitter.prototype = {
 
                             return Parse.Promise.as(nameIndex + 1);
 
+                        }, function(e)
+                        {
+                            console.log(JSON.stringify);
+
+                            return Parse.Promise.as().reject();
                         });
                     }, function (e) {
 
