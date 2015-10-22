@@ -1382,36 +1382,46 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
     var testPrototype = _parse.Object.extend("test");
 
-    var test = new testPrototype();
+    //var test = new testPrototype();
+    //
+    //var perBatch = 100;
+    //
+    //var batch = [];
+    //
+    //for (var i = 0; i < 2999 ; i++ )
+    //{
+    //
+    //    var test = new testPrototype();
+    //
+    //    test.set("ts", (new Date).getTime());
+    //
+    //    batch.push(test);
+    //
+    //}
 
-    var perBatch = 100;
-
-    var batch = [];
-
-    for (var i = 0; i < 2999 ; i++ )
-    {
-
-        var test = new testPrototype();
-
-        test.set("ts", (new Date).getTime());
-
-        batch.push(test);
-
-    }
-
-    pages = Math.floor(batch.length / perBatch);
-    pages = (batch.length % perBatch) > 0 ? pages + 1 : pages;
+    //pages = Math.floor(batch.length / perBatch);
+    //pages = (batch.length % perBatch) > 0 ? pages + 1 : pages;
 
     promise = _parse.Promise.as(0);
 
-    for(var i = 0; i < pages ; i++)
+    for(var i = 0; i < 29 ; i++)
     {
         promise = promise.then(function(k)
         {
-            var spliceAmount = batch.length > perBatch ? perBatch : batch.length;
-            var dataToSave = batch.splice(0, spliceAmount);
+            var batchLocal = [];
 
-            return _parse.Object.saveAll(dataToSave).then(
+            for(var j = 0; j < 100 ; j++)
+            {
+                var test = new testPrototype();
+
+                test.set("ts", (new Date).getTime());
+
+                batchLocal.push(test);
+            }
+
+            console.log("Batch Size: " + batchLocal.length);
+
+            return _parse.Object.saveAll(batchLocal).then(
                 function(objs)
                 {
                     console.log("Saved Page. " + k);
@@ -1429,7 +1439,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
             );
 
         });
-    };
+    }
 
     _parse.Promise.when(promise).then(
         function()
