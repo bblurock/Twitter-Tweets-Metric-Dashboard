@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var sleep = require('sleep');
 var oauth = require("cloud/libs/oauth.js");
 
 
@@ -1414,6 +1415,8 @@ Parse.Cloud.job("testParseSave", function (request, status) {
                 function(objs)
                 {
                     console.log("Saved Page. " + k);
+
+                    sleep.sleep(1);
 
                     return _parse.Promise.as(k+1);
                 },
