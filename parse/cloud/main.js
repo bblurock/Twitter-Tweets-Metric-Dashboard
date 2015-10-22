@@ -1382,12 +1382,12 @@ Parse.Cloud.job("testParseSave", function (request, status) {
     var test = new testPrototype();
 
     var batch = [];
-    for (var i = 0; i < 10 ; i++ )
+    for (var i = 0; i < 2000 ; i++ )
     {
 
         var test = new testPrototype();
 
-        test.set("QQ", i);
+        test.set("QQ", Date.getTime());
 
         batch.push(test);
 
