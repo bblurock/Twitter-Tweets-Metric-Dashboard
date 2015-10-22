@@ -1384,6 +1384,23 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
 });
 
+Parse.Cloud.job("testParseSave", function (request, status) {
+
+    _parse.Cloud.useMasterKey();
+
+    var testPrototype = _parse.Object.extend("test");
+
+    var test = new testPrototype();
+
+    test.set("QQ", 123);
+
+    test.save().then(function()
+    {
+        console.log("Save success.");
+    });
+
+});
+
 Parse.Cloud.job("parseTweetsFromSearchApi", function (request, status) {
 
     Parse.Cloud.useMasterKey();
