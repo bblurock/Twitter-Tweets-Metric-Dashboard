@@ -895,7 +895,7 @@ Twitter.prototype = {
                     // Perform Saving
                     return _parse.Object.saveAll(tweets).then(function (obj) {
 
-                        //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
+                        console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
                         var logPrototype = _parse.Object.extend("Logs");
 
@@ -912,13 +912,17 @@ Twitter.prototype = {
 
                         }, function(e)
                         {
-                            console.log(JSON.stringify);
+                            console.log(JSON.stringify(e));
+                            console.log("Saving logs failed.");
 
                             return Parse.Promise.as().reject();
                         });
                     }, function (e) {
 
+                        console.log(JSON.stringify(e));
                         console.log("Saving tweets failed.");
+
+                        return Parse.Promise.as().reject();
 
                     });
 
