@@ -1405,7 +1405,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
         var test = new testPrototype();
 
-        test.set("QQ", Batch);
+        test.set("QQ", "batch");
 
         batch.push(test);
 
