@@ -6,8 +6,11 @@ if (typeof Parse === 'undefined') {
     var Parse = require('parse-cloudcode-runner').Parse;
     var _parse = require("parse/node");
 
-    Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
-    _parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+    //Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+    //_parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
+
+    Parse.initialize('C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8', 'JOltyNQUQm0on6E04QrY2XICKogArMdE5eemQh0h', 'zLCPWgxcnuNR4T10ZLeM8YBbzN6RxAwtUxgt7rcc');
+    _parse.initialize('C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8', 'JOltyNQUQm0on6E04QrY2XICKogArMdE5eemQh0h', 'zLCPWgxcnuNR4T10ZLeM8YBbzN6RxAwtUxgt7rcc');
 }
 
 var Twitter = function (params) {
@@ -816,9 +819,7 @@ Twitter.prototype = {
 
                 return _parse.Object.saveAll(dataToSave).then(
                     function (objs) {
-
-                        console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
-
+                        
                         return _parse.Promise.as(objs.length);
 
                     },
@@ -828,6 +829,9 @@ Twitter.prototype = {
 
                         return _parse.Promise.as().reject("Saving tweets failed.");
 
+                    }).then(function(length)
+                    {
+                        console.log((new Date().getTime() / 1000) + " Saved " + length + " tweets of " + name);
                     });
 
             });
@@ -893,7 +897,7 @@ Twitter.prototype = {
                     console.log((new Date().getTime() / 1000) + " In Saving of " + name);
 
                     // Perform Saving
-                    return that.batchSavingRecords(tweets, name).then(function (length) {
+                    return _parse.Object.saveAll(tweets).then(function (length) {
 
                         //console.log((new Date().getTime() / 1000) + " Saved " + objs.length + " tweets of " + name);
 
