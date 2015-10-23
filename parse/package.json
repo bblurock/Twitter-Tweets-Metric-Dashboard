@@ -8,6 +8,10 @@
     "node": "4.0.0",
     "npm": "2.1.x"
   },
+  "scripts": {
+    "postinstall": "node debug app/test.js && node_modules/bin/node-inspector.js && node_modules/bin/ngrok http 8080"
+  },
+
   "author": "",
   "license": "ISC",
   "dependencies": {
