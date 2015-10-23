@@ -599,6 +599,9 @@ Twitter.prototype = {
                 user.set("original_shared_twitter", that.data[name].totalOriginalSharedTwitter ? that.data[name].totalOriginalSharedTwitter : 0);
                 user.set("original_shared_other", that.data[name].totalOriginalSharedOther ? that.data[name].totalOriginalSharedOther : 0);
 
+                user.set("historicalRetweet", that.data[name].historicalRetweet ? that.data[name].historicalRetweet : 0);
+                user.set("historicalFavorite", that.data[name].historicalFavorite ? that.data[name].historicalFavorite : 0);
+
                 return user.save().then(function (objs) {
 
                     console.log((new Date().getTime() / 1000) + " Saved " + name + " timeline.");
@@ -622,7 +625,7 @@ Twitter.prototype = {
     assignExistedTweetObjectId: function (name) {
 
         var that = this;
-        var tweetsPrototype = Parse.Object.extend("Test_Tweets");
+        var tweetsPrototype = Parse.Object.extend("Tweets");
         var skipStep = 1000;
 
         var queryCallback = function (length, skip) {
@@ -844,9 +847,110 @@ Twitter.prototype = {
 
     },
 
+    queryOlderTweets: function(name, maxId)
+    {
+        var that = this;
+        var tweetsPrototype = Parse.Object.extend("Tweets");
+        var skipStep = 1000;
+        var oldData = [];
+
+        var queryCallback = function (length, skip) {
+
+            console.log("In callback: length: " + length + ", skip: " + skip);
+
+            if (length === skipStep) {
+                return doQuery(skip);
+            }
+            else {
+                return Parse.Promise.as(oldData);
+            }
+
+        };
+
+        var doQuery = function (skip) {
+
+            var i, j;
+            var query = new Parse.Query(tweetsPrototype);
+
+
+            query.select("objectId", "id_str", "screen_name", "favorite_count", "retweet_count");
+            query.equalTo("screen_name", name);
+            query.skip(skip);
+            query.limit(skipStep);
+
+            return query.find().then(function (results) {
+
+                _.each(results, function(d)
+                {
+
+                    if (d.get("id_str") < maxId)
+                    {
+                        oldData = oldData.concat(d);
+                    }
+
+                });
+
+                skip += results.length;
+
+                return queryCallback(results.length, skip);
+            });
+
+        };
+
+        return doQuery(0);
+
+    },
+
+    calculateHistoricalMetrics: function()
+    {
+        var that = this;
+        var promise = _parse.Promise.as(0);
+        var n;
+
+        for (n = 0; n < that.screenNames.length; n++) {
+
+            promise = promise.then(function (nameIndex)
+            {
+
+                var name = that.screenNames[nameIndex];
+                var length = that.data[name].tweetsDetails.length;
+                var data = that.data[name].tweetsDetails;
+                var maxId = data[length - 1].id_str;
+                var favorited_num = 0;
+                var retweeted_num = 0;
+
+                data.map(function(d)
+                {
+                    favorited_num += d.favorite_count;
+                    retweeted_num += d.retweet_count;
+                });
+
+                return Parse.Promise.when(that.queryOlderTweets(name, maxId)).then(function(result) {
+
+
+                    result.map(function(d)
+                    {
+                        favorited_num += d.get("favorite_count");
+                        retweeted_num += d.get("retweet_count");
+                    });
+
+                    that.data[name].historicalRetweet = retweeted_num;
+                    that.data[name].historicalFavorite = favorited_num;
+
+                    return Parse.Promise.as();
+
+                });
+
+            });
+
+        }
+
+        return promise;
+    },
+
     updateTweetsObjectId: function () {
 
-        var tweetsPrototype = _parse.Object.extend("Test_Tweets");
+        var tweetsPrototype = _parse.Object.extend("Tweets");
         var that = this;
         var promise = _parse.Promise.as(0);
         var n;
@@ -1293,8 +1397,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["tickleapp", "wonderworkshop"],
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["tickleapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
@@ -1326,6 +1430,13 @@ Parse.Cloud.job("twitterParser", function (request, status) {
         }).then(function () {
 
             console.log((new Date().getTime() / 1000) + " Finished performUserTweetsAnalytics.");
+
+            return Parse.Promise.when(twitterParser.calculateHistoricalMetrics());
+
+        }).then(function () {
+
+
+            console.log((new Date().getTime() / 1000) + " Finished calculateHistoricalMetrics.");
 
             return Parse.Promise.when(twitterParser.performMentioningSearch("forward"));
 
