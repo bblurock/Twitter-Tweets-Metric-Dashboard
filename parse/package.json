@@ -11,10 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.14.1",
     "dotenv": "^1.2.0",
     "parse": "^1.6.3",
+    "parse-cloud-express": "^1.0.6",
     "parse-cloudcode-runner": "0.0.5",
-    "underscore": "^1.8.3",
-    "sleep": "^3.0.0"
+    "sleep": "^3.0.0",
+    "underscore": "^1.8.3"
   }
 }
