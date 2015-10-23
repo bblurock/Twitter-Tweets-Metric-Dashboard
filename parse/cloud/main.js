@@ -602,6 +602,9 @@ Twitter.prototype = {
                 user.set("historicalRetweet", that.data[name].historicalRetweet ? that.data[name].historicalRetweet : 0);
                 user.set("historicalFavorite", that.data[name].historicalFavorite ? that.data[name].historicalFavorite : 0);
 
+                user.set("oldestIdStrOfCurrentSearchWindow", that.data[name].oldestIdStrOfCurrentSearchWindow ? that.data[name].oldestIdStrOfCurrentSearchWindow : 0);
+                user.set("newestIdStrOfCurrentSearchWindow", that.data[name].newestIdStrOfCurrentSearchWindow ? that.data[name].newestIdStrOfCurrentSearchWindow : 0);
+
                 return user.save().then(function (objs) {
 
                     console.log((new Date().getTime() / 1000) + " Saved " + name + " timeline.");
@@ -799,12 +802,13 @@ Twitter.prototype = {
 
     },
 
-    batchSavingRecords: function (data, name) {
+    batchSavingRecords: function (data) {
 
         var that = this;
-        var promise = _parse.Promise.as(0);
+        var promise = _parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
 
-        var perBatch = 100;
+        var perBatch = 20;
+        var threshold = 1000;
 
         pages = Math.floor(data.length / perBatch);
         pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
@@ -815,30 +819,57 @@ Twitter.prototype = {
         for (var i = 0 ; i < pages ; i++)
         {
             promise = promise.then(function (k) {
+
                 var spliceAmount = data.length > perBatch ? perBatch : data.length;
-
-                console.log("Before Splice: " + data.length);
-
                 var dataToSave = data.splice(0, spliceAmount);
+                var pagePromise = new Parse.Promise();
 
-                return _parse.Object.saveAll(dataToSave).then(
+                _parse.Object.saveAll(dataToSave).then(
                     function (objs) {
 
-                        return _parse.Promise.as(objs.length);
+                        var ts = (new Date).getTime();
+                        var diff = ts - k.ts;
 
-                    }).then(function(length) {
+                        console.log("Diff:" + diff, k.index);
 
-                        console.log((new Date().getTime() / 1000) + " Saved " + length + " tweets of " + name);
+                        if (diff < threshold)
+                        {
+                            var toSleep = threshold - diff;
 
-                        return _parse.Promise.as(k+1);
+                            console.log(toSleep);
 
-                    }, function(e) {
+                            try
+                            {
+                                setTimeout(function(){
 
-                        console.log(JSON.stringify(e));
+                                    console.log("Saved Page. " + k.index);
 
-                        return _parse.Promise.as().reject("Saving tweets failed.");
+                                    pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
 
-                    });
+                                }, toSleep);
+                            }
+                            catch (e) {
+                                console.log(JSON.stringify(e));
+                            }
+
+                        }
+                        else {
+                            pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
+                        }
+
+                }).then(function(length) {
+
+                    return _parse.Promise.as(k+1);
+
+                }, function(e) {
+
+                    console.log(JSON.stringify(e));
+
+                    return _parse.Promise.as().reject("Saving tweets failed.");
+
+                });
+
+                return pagePromise;
 
             });
         }
@@ -914,10 +945,20 @@ Twitter.prototype = {
 
                 var name = that.screenNames[nameIndex];
                 var length = that.data[name].tweetsDetails.length;
+
+                if (length == 0)
+                {
+                    return Parse.Promise.as(nameIndex+1);
+                }
+
                 var data = that.data[name].tweetsDetails;
                 var maxId = data[length - 1].id_str;
                 var favorited_num = 0;
                 var retweeted_num = 0;
+
+                // Set oldest id_str of current search window
+                that.data[name].oldestIdStrOfCurrentSearchWindow = maxId;
+                that.data[name].newestIdStrOfCurrentSearchWindow = data[0].id_str;
 
                 data.map(function(d)
                 {
@@ -937,7 +978,7 @@ Twitter.prototype = {
                     that.data[name].historicalRetweet = retweeted_num;
                     that.data[name].historicalFavorite = favorited_num;
 
-                    return Parse.Promise.as();
+                    return Parse.Promise.as(nameIndex+1);
 
                 });
 
@@ -960,6 +1001,9 @@ Twitter.prototype = {
             promise = promise.then(function (nameIndex) {
 
                 var name = that.screenNames[nameIndex];
+
+                console.log(name);
+
                 var length = that.data[name].tweetsDetails.length;
 
                 console.log((new Date().getTime() / 1000) + " Prepare saving " + length + " tweets of - " + name);
@@ -1397,8 +1441,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            //screenNames: ["tickleapp"],
+            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["hopscotch"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
@@ -1467,19 +1511,21 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             console.log((new Date().getTime() / 1000) + " Finished updateTweetsObjectId.");
 
-            return _parse.Object.saveAll(twitterParser.tweets, {
-                success: function(objs)
-                {
-                    console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
+            return twitterParser.batchSavingRecords(twitterParser.tweets);
 
-                    return Parse.Promise.as();
-
-                },
-                error: function(e)
-                {
-                    console.log(JSON.stringify(e));
-                }
-            });
+            //return _parse.Object.saveAll(twitterParser.tweets, {
+            //    success: function(objs)
+            //    {
+            //        console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
+            //
+            //        return Parse.Promise.as();
+            //
+            //    },
+            //    error: function(e)
+            //    {
+            //        console.log(JSON.stringify(e));
+            //    }
+            //});
         });
 
 });
@@ -1519,7 +1565,6 @@ Parse.Cloud.job("testParseSave", function (request, status) {
                     var ts = (new Date).getTime();
                     var diff = ts - k.ts;
                     var threshold = 1000;
-
 
                     console.log("Diff:" + diff, k.index);
 
