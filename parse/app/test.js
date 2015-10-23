@@ -8,37 +8,67 @@ Parse.initialize('C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8', 'JOltyNQUQm0on6E04Q
 
 Parse.Cloud.useMasterKey();
 
-var pages, promise;
+var i, pages, promise;
 var testPrototype = Parse.Object.extend("test");
+var perBatch = 20;
+var data = [];
 
-promise = Parse.Promise.as(0);
+for (i = 0; i < 3000 ; i++ )
+{
+	var test = new testPrototype();
+	test.set("ts", (new Date).getTime());
+	data.push(test);
+}
 
-for(var i = 0; i < 29 ; i++)
+// Calculation of total pages
+pages = Math.floor(data.length / perBatch);
+pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
+promise = Parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
+
+for (var j= 0; j < pages ; j++)
 {
 
 	promise = promise.then(function(k)
 	{
-		var batchLocal = [];
+		var spliceAmount = data.length > perBatch ? perBatch : data.length;
+		var dataToSave = data.splice(0, spliceAmount);
+		var pagePromise = new Parse.Promise();
 
-		for(var j = 0; j < 100 ; j++)
-		{
-			var test = new testPrototype();
-
-			test.set("ts", (new Date).getTime());
-
-			batchLocal.push(test);
-		}
-
-		console.log("Batch Size: " + batchLocal.length);
-
-		return Parse.Object.saveAll(batchLocal).then(
+		Parse.Object.saveAll(dataToSave).then(
 			function(objs)
 			{
-				console.log("Saved Page. " + k);
+				var ts = (new Date).getTime();
+				var diff = ts - k.ts;
+				var threshold = 1000;
 
-				//sleep.sleep(1);
 
-				return Parse.Promise.as(k+1);
+				console.log("Diff:" + diff, k.index);
+
+				if (diff < threshold)
+				{
+					var toSleep = threshold - diff;
+
+					console.log(toSleep);
+
+					try
+					{
+						setTimeout(function(){
+
+							console.log("Saved Page. " + k.index);
+
+							pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
+
+						}, toSleep);
+					}
+					catch (e) {
+						console.log(JSON.stringify(e));
+					}
+
+				}
+				else {
+					pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
+				}
+
 			},
 			function(e)
 			{
@@ -48,8 +78,8 @@ for(var i = 0; i < 29 ; i++)
 			}
 		);
 
+		return pagePromise;
 	});
-
 }
 
 Parse.Promise.when(promise).then(

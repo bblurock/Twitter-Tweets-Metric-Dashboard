@@ -1511,26 +1511,43 @@ Parse.Cloud.job("testParseSave", function (request, status) {
         {
             var spliceAmount = data.length > perBatch ? perBatch : data.length;
             var dataToSave = data.splice(0, spliceAmount);
+            var pagePromise = new Parse.Promise();
 
-            return _parse.Object.saveAll(dataToSave).then(
+            Parse.Object.saveAll(dataToSave).then(
                 function(objs)
                 {
                     var ts = (new Date).getTime();
                     var diff = ts - k.ts;
                     var threshold = 1000;
 
+
                     console.log("Diff:" + diff, k.index);
 
                     if (diff < threshold)
                     {
                         var toSleep = threshold - diff;
-                        
-                        setTimeout(function(){ console.log("To sleep: " + toSleep); }, toSleep);
+
+                        console.log(toSleep);
+
+                        try
+                        {
+                            setTimeout(function(){
+
+                                console.log("Saved Page. " + k.index);
+
+                                pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
+
+                            }, toSleep);
+                        }
+                        catch (e) {
+                            console.log(JSON.stringify(e));
+                        }
+
+                    }
+                    else {
+                        pagePromise.resolve({"index": k.index+1, "ts": (new Date).getTime()});
                     }
 
-                    console.log("Saved Page. " + k.index);
-
-                    return _parse.Promise.as({"index": k.index+1, "ts": (new Date).getTime()});
                 },
                 function(e)
                 {
@@ -1539,6 +1556,8 @@ Parse.Cloud.job("testParseSave", function (request, status) {
                     return promise.reject("Save error");
                 }
             );
+
+            return pagePromise;
         });
     }
 
