@@ -1376,12 +1376,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
 Parse.Cloud.job("testParseSave", function (request, status) {
 
-    _parse.Cloud.useMasterKey();
-
-    var pages, promise;
-
-    var testPrototype = _parse.Object.extend("test");
-
     //var test = new testPrototype();
     //
     //var perBatch = 100;
@@ -1402,10 +1396,17 @@ Parse.Cloud.job("testParseSave", function (request, status) {
     //pages = Math.floor(batch.length / perBatch);
     //pages = (batch.length % perBatch) > 0 ? pages + 1 : pages;
 
+    _parse.Cloud.useMasterKey();
+
+    var pages, promise;
+
+    var testPrototype = _parse.Object.extend("test");
+
     promise = _parse.Promise.as(0);
 
     for(var i = 0; i < 29 ; i++)
     {
+        console.log("Batch iteration: " + i);
         promise = promise.then(function(k)
         {
             var batchLocal = [];
@@ -1426,7 +1427,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
                 {
                     console.log("Saved Page. " + k);
 
-                    sleep.sleep(1);
+                    //sleep.sleep(1);
 
                     return _parse.Promise.as(k+1);
                 },
@@ -1439,6 +1440,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
             );
 
         });
+        console.log('Promise of ' + i  + ' created: ' + JSON.stringify(promise));
     }
 
     _parse.Promise.when(promise).then(
