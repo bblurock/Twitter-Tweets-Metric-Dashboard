@@ -1441,8 +1441,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["hopscotch"],
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["hopscotch"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
