@@ -9,7 +9,7 @@
     "npm": "2.1.x"
   },
   "scripts": {
-    "postinstall": "node debug app/test.js && node_modules/bin/node-inspector.js && node_modules/bin/ngrok http 8080"
+    "postinstall": "npm install -g node-inspector ngrok && node debug app/test.js && node-inspector && ngrok http 8080"
   },
 
   "author": "",
@@ -17,8 +17,6 @@
   "dependencies": {
     "body-parser": "^1.14.1",
     "dotenv": "^1.2.0",
-    "ngrok": "^0.2.2",
-    "node-inspector": "^0.12.3",
     "parse": "^1.6.3",
     "parse-cloud-express": "^1.0.6",
     "parse-cloudcode-runner": "0.0.5",
