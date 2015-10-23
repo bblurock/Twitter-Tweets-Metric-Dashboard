@@ -9,7 +9,7 @@
     "npm": "2.1.x"
   },
   "scripts": {
-    "postinstall": "npm install -g node-inspector ngrok && 'node debug app/test.js' && 'node-inspector' && 'ngrok http 8080'"
+    "postinstall": "npm install -g node-inspector ngrok"
   },
   "author": "",
   "license": "ISC",
