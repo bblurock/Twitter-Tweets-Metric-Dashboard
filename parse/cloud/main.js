@@ -1435,7 +1435,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
         }).then(function () {
 
-
             console.log((new Date().getTime() / 1000) + " Finished calculateHistoricalMetrics.");
 
             return Parse.Promise.when(twitterParser.performMentioningSearch("forward"));
@@ -1487,60 +1486,49 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
 Parse.Cloud.job("testParseSave", function (request, status) {
 
-    //var test = new testPrototype();
-    //
-    //var perBatch = 100;
-    //
-    //var batch = [];
-    //
-    //for (var i = 0; i < 2999 ; i++ )
-    //{
-    //
-    //    var test = new testPrototype();
-    //
-    //    test.set("ts", (new Date).getTime());
-    //
-    //    batch.push(test);
-    //
-    //}
-
-    //pages = Math.floor(batch.length / perBatch);
-    //pages = (batch.length % perBatch) > 0 ? pages + 1 : pages;
-
     _parse.Cloud.useMasterKey();
 
-    var pages, promise;
-
+    var i, pages, promise;
     var testPrototype = _parse.Object.extend("test");
+    var perBatch = 20;
+    var data = [];
 
-    promise = _parse.Promise.as(0);
-
-    for(var i = 0; i < 29 ; i++)
+    for (i = 0; i < 3000 ; i++ )
     {
-        console.log("Batch iteration: " + i);
+        var test = new testPrototype();
+        test.set("ts", (new Date).getTime());
+        data.push(test);
+    }
+
+    // Calculation of total pages
+    pages = Math.floor(data.length / perBatch);
+    pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
+    promise = _parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
+
+    for (i = 0; i < pages ; i++)
+    {
         promise = promise.then(function(k)
         {
-            var batchLocal = [];
+            var spliceAmount = data.length > perBatch ? perBatch : data.length;
+            var dataToSave = data.splice(0, spliceAmount);
 
-            for(var j = 0; j < 100 ; j++)
-            {
-                var test = new testPrototype();
-
-                test.set("ts", (new Date).getTime());
-
-                batchLocal.push(test);
-            }
-
-            console.log("Batch Size: " + batchLocal.length);
-
-            return _parse.Object.saveAll(batchLocal).then(
+            return _parse.Object.saveAll(dataToSave).then(
                 function(objs)
                 {
-                    console.log("Saved Page. " + k);
+                    var ts = (new Date).getTime();
+                    var diff = ts - k.ts;
+                    var threshold = 1000;
 
-                    //sleep.sleep(1);
+                    console.log("Diff:" + diff, k.index);
 
-                    return _parse.Promise.as(k+1);
+                    if (diff < threshold)
+                    {
+                        usleep(threshold - diff);
+                    }
+
+                    console.log("Saved Page. " + k.index);
+
+                    return _parse.Promise.as({"index": k.index+1, "ts": (new Date).getTime()});
                 },
                 function(e)
                 {
@@ -1549,9 +1537,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
                     return promise.reject("Save error");
                 }
             );
-
         });
-        console.log('Promise of ' + i  + ' created: ' + JSON.stringify(promise));
     }
 
     _parse.Promise.when(promise).then(
