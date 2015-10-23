@@ -1523,8 +1523,9 @@ Parse.Cloud.job("testParseSave", function (request, status) {
 
                     if (diff < threshold)
                     {
-                        console.log("To sleep: " + threshold - diff);
-                        sleep.usleep(threshold - diff);
+                        var toSleep = threshold - diff;
+                        console.log("To sleep: " + toSleep);
+                        sleep.usleep(toSleep);
                     }
 
                     console.log("Saved Page. " + k.index);
