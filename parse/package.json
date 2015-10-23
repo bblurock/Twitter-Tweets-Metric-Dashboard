@@ -13,6 +13,8 @@
   "dependencies": {
     "body-parser": "^1.14.1",
     "dotenv": "^1.2.0",
+    "ngrok": "^0.2.2",
+    "node-inspector": "^0.12.3",
     "parse": "^1.6.3",
     "parse-cloud-express": "^1.0.6",
     "parse-cloudcode-runner": "0.0.5",
