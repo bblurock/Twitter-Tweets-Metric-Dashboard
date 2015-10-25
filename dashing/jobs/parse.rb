@@ -178,16 +178,10 @@ def sendParseDataset
 
     retweetedTimeline = Hash.new
     favoriteTimeLine = Hash.new
-    mentionedTimeline = Hash.new
-    sharedTwitterTimeline = Hash.new
-    sharedOtherTimeline = Hash.new
     followers = Hash.new
 
     retweetedChartData = Array.new
     favoritedChartData = Array.new
-    mentionedChartData = Array.new
-    sharedTwitterChartData = Array.new
-    sharedOtherChartData = Array.new
     followerChartData = Array.new
 
     # Grouping data by "screen_name"
@@ -204,46 +198,18 @@ def sendParseDataset
             favoriteTimeLine[name] = []
         end
 
-        if !mentionedTimeline.include? name
-            mentionedTimeline[name] = []
-        end
-
-        if !sharedTwitterTimeline.include? name
-            sharedTwitterTimeline[name] = []
-        end
-
-        if !sharedOtherTimeline.include? name
-            sharedOtherTimeline[name] = []
-        end
-
         if !followers.include? name
             followers[name] = []
         end
 
-
-        if record["retweeted"] && record["retweeted"] != 0
-            retweeted = record["retweeted"]
+        if record["historicalRetweet"] && record["historicalRetweet"] != 0
+            retweeted = record["historicalRetweet"]
             retweetedTimeline[name].push [timestamp, retweeted]
         end
 
-        if record["favorited"] && record["favorited"] != 0
-            favorited = record["favorited"]
+        if record["historicalFavorite"] && record["historicalFavorite"] != 0
+            favorited = record["historicalFavorite"]
             favoriteTimeLine[name].push [timestamp, favorited]
-        end
-
-        if record["original_mentioned"] && record["original_mentioned"] != 0
-            mentioned = record["original_mentioned"]
-            mentionedTimeline[name].push [timestamp, mentioned]
-        end
-
-        if record["original_shared_twitter"] && record["original_shared_twitter"] != 0
-            shared = record["original_shared_twitter"]
-            sharedTwitterTimeline[name].push [timestamp, shared]
-        end
-
-        if record["original_shared_twitter"] && record["original_shared_twitter"] != 0
-            shared = record["original_shared_twitter"]
-            sharedOtherTimeline[name].push [timestamp, shared]
         end
 
         if record["followers"] && record["followers"] != 0
@@ -254,28 +220,15 @@ def sendParseDataset
     end
 
     retweetedTimeline.each do |key, array|
+        pp key
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         retweetedChartData.push hash
     end
 
     favoriteTimeLine.each do |key, array|
+        pp key
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         favoritedChartData.push hash
-    end
-
-    mentionedTimeline.each do |key, array|
-        hash = {"name"=>key, "data"=>(groupDataByDate array)}
-        mentionedChartData.push hash
-    end
-
-    sharedTwitterTimeline.each do |key, array|
-        hash = {"name"=>key, "data"=>(groupDataByDate array)}
-        sharedTwitterChartData.push hash
-    end
-
-    sharedOtherTimeline.each do |key, array|
-        hash = {"name"=>key, "data"=>(groupDataByDate array)}
-        sharedOtherChartData.push hash
     end
 
     followers.each do |key, array|
@@ -283,17 +236,14 @@ def sendParseDataset
         followerChartData.push hash
     end
 
-#     puts followerChartData;
-
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
-    send_event('mentioned',  { data: groupedMentionedArray.to_json })
     send_event('followers',  { data: followerChartData.to_json })
+    send_event('mentioned',  { data: groupedMentionedArray.to_json })
     send_event('shared',     { data: groupedSharedArray.to_json })
 
 end
 
 SCHEDULER.every '180s', :first_in => 0 do |job|
     sendParseDataset
-    # send_event('followers',  { data: followerChartData.to_json})
 end
