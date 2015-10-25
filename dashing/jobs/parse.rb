@@ -220,13 +220,11 @@ def sendParseDataset
     end
 
     retweetedTimeline.each do |key, array|
-        pp key
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         retweetedChartData.push hash
     end
 
     favoriteTimeLine.each do |key, array|
-        pp key
         hash = {"name"=>key, "data"=>(groupDataByDate array)}
         favoritedChartData.push hash
     end
