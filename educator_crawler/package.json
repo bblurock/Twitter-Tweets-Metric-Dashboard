@@ -40,6 +40,7 @@
     "googlemaps": "^1.0.2",
     "phantom": "^0.8.0",
     "phantomjs": "^1.9.18",
-    "simplecrawler": "^0.5.4"
+    "simplecrawler": "^0.5.4",
+    "yargs": "^3.29.0"
   }
 }
