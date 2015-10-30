@@ -1510,19 +1510,6 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             return twitterParser.batchSavingRecords(twitterParser.tweets);
 
-            //return Parse.Object.saveAll(twitterParser.tweets, {
-            //    success: function(objs)
-            //    {
-            //        console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
-            //
-            //        return Parse.Promise.as();
-            //
-            //    },
-            //    error: function(e)
-            //    {
-            //        console.log(JSON.stringify(e));
-            //    }
-            //});
         });
 
 });
