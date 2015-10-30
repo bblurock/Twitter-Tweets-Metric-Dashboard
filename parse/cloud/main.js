@@ -3,13 +3,9 @@ var sleep = require('sleep');
 var oauth = require("cloud/libs/oauth.js");
 
 
-if (typeof Parse === 'undefined')
-{
+if (typeof Parse === 'undefined') {
     var Parse = require('parse-cloudcode-runner').Parse;
-    var _parse = require("parse/node");
-
     Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
-    _parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
 }
 
 var Twitter = function (params) {
@@ -733,12 +729,12 @@ Twitter.prototype = {
 
                 console.log((new Date().getTime() / 1000) + " calculatingMentioning ScreenName: " + screenName);
 
-                var queryCallback = function (length, skip) {
+                var queryCallback = function (length, date) {
 
-                    //console.log("In callback: length: " + length + ", skip: " + skip);
+                    console.log("In callback: length: " + length);
 
                     if (length === skipStep) {
-                        return doQuery(skip);
+                        return doQuery(date);
                     }
                     else {
                         that.data[screenName].totalReplied               = that.counters.totalReplied;
@@ -754,17 +750,18 @@ Twitter.prototype = {
 
                 };
 
-                var doQuery = function (skip) {
+                var doQuery = function (date) {
 
                     var query = new Parse.Query(mentioningPrototype);
 
                     query.equalTo("mentioning", screenName);
-                    query.skip(skip);
-                    query.limit(skipStep);
+                    query.lessThan("createdAt", date);
+                    query.limit(1000);
 
                     return query.find().then(function (results) {
 
-                        console.log((new Date().getTime() / 1000) + "mentioning result: " + results.length)
+                        console.log((new Date().getTime() / 1000) + "mentioning result: " + results.length);
+
                         for (var i = 0; i < results.length; i++) {
 
                             if (results[i].get("user_screen_name") != screenName)
@@ -774,16 +771,18 @@ Twitter.prototype = {
                                 that.countSharedTwitter(results[i]);
                                 that.countSharedOther(results[i]);
                             }
+
                         }
 
-                        skip += results.length;
+                        return queryCallback(results.length, results[results.length-1].get("createdAt"));
 
-                        return queryCallback(results.length, skip);
+                    }, function(e) {
+                        console.log(JSON.stringify(e));
                     });
 
                 };
 
-                return doQuery(0);
+                return doQuery(new Date());
 
             }).then(function () {
                 //console.log("Replied: " + that.counters.totalReplied);
@@ -805,7 +804,7 @@ Twitter.prototype = {
     batchSavingRecords: function (data) {
 
         var that = this;
-        var promise = _parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
+        var promise = Parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
 
         var perBatch = 20;
         var threshold = 1000;
@@ -824,7 +823,7 @@ Twitter.prototype = {
                 var dataToSave = data.splice(0, spliceAmount);
                 var pagePromise = new Parse.Promise();
 
-                _parse.Object.saveAll(dataToSave).then(
+                Parse.Object.saveAll(dataToSave).then(
                     function (objs) {
 
                         var ts = (new Date).getTime();
@@ -859,13 +858,13 @@ Twitter.prototype = {
 
                 }).then(function(length) {
 
-                    return _parse.Promise.as(k+1);
+                    return Parse.Promise.as(k+1);
 
                 }, function(e) {
 
                     console.log(JSON.stringify(e));
 
-                    return _parse.Promise.as().reject("Saving tweets failed.");
+                    return Parse.Promise.as().reject("Saving tweets failed.");
 
                 });
 
@@ -935,7 +934,7 @@ Twitter.prototype = {
     calculateHistoricalMetrics: function()
     {
         var that = this;
-        var promise = _parse.Promise.as(0);
+        var promise = Parse.Promise.as(0);
         var n;
 
         for (n = 0; n < that.screenNames.length; n++) {
@@ -991,9 +990,9 @@ Twitter.prototype = {
 
     updateTweetsObjectId: function () {
 
-        var tweetsPrototype = _parse.Object.extend("Tweets");
+        var tweetsPrototype = Parse.Object.extend("Tweets");
         var that = this;
-        var promise = _parse.Promise.as(0);
+        var promise = Parse.Promise.as(0);
         var n;
 
         for (n = 0; n < that.screenNames.length; n++) {
@@ -1040,7 +1039,7 @@ Twitter.prototype = {
 
                     that.tweets = that.tweets.concat(tweets);
 
-                    return _parse.Promise.as(nameIndex+1);
+                    return Parse.Promise.as(nameIndex+1);
 
                 });
 
@@ -1434,15 +1433,13 @@ Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
 Parse.Cloud.job("twitterParser", function (request, status) {
 
     Parse.Cloud.useMasterKey();
-    _parse.Cloud.useMasterKey();
 
     var that = this;
 
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["codeorg"],
+            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
@@ -1513,7 +1510,7 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
             return twitterParser.batchSavingRecords(twitterParser.tweets);
 
-            //return _parse.Object.saveAll(twitterParser.tweets, {
+            //return Parse.Object.saveAll(twitterParser.tweets, {
             //    success: function(objs)
             //    {
             //        console.log((new Date().getTime() / 1000) + "Batch Save success. " + twitterParser.tweets.length + " tweets.");
@@ -1532,10 +1529,10 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
 Parse.Cloud.job("testParseSave", function (request, status) {
 
-    _parse.Cloud.useMasterKey();
+    Parse.Cloud.useMasterKey();
 
     var i, pages, promise;
-    var testPrototype = _parse.Object.extend("test");
+    var testPrototype = Parse.Object.extend("test");
     var perBatch = 20;
     var data = [];
 
@@ -1549,7 +1546,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
     // Calculation of total pages
     pages = Math.floor(data.length / perBatch);
     pages = (data.length % perBatch) > 0 ? pages + 1 : pages;
-    promise = _parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
+    promise = Parse.Promise.as({"index": 0, "ts": (new Date).getTime()});
 
     for (i = 0; i < pages ; i++)
     {
@@ -1606,7 +1603,7 @@ Parse.Cloud.job("testParseSave", function (request, status) {
         });
     }
 
-    _parse.Promise.when(promise).then(
+    Parse.Promise.when(promise).then(
         function()
         {
             console.log("Batch Save success.");
