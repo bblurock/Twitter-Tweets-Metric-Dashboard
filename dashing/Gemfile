@@ -8,3 +8,5 @@ gem 'twitter', '>= 5.9.0'
 gem 'rest-client'
 
 gem 'parse-ruby-client', git: 'https://github.com/adelevie/parse-ruby-client.git'
+
+gem "omniauth-google-oauth2"
