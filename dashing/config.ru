@@ -1,8 +1,6 @@
 require 'omniauth-google-oauth2'
 require 'sinatra'
 
-use Rack::Session::Cookie, :secret => ENV['RACK_COOKIE_SECRET']
-
 enable :sessions
 
 def logger; settings.logger end
@@ -25,6 +23,11 @@ configure do
   log_file.sync = true
   logger = Logger.new(log_file)
   logger.level = Logger::DEBUG
+
+  use Rack::Session::Cookie, :key => 'rack.session',
+                             :path => '/',
+                             :expire_after => 86400,
+                             :secret => ENV['RACK_COOKIE_SECRET']
 
   set :logger, logger
 end
