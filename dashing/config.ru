@@ -1,6 +1,8 @@
 require 'omniauth-google-oauth2'
 require 'sinatra'
 
+use Rack::Session::Cookie, :secret => ENV['RACK_COOKIE_SECRET']
+
 enable :sessions
 
 def logger; settings.logger end
@@ -65,8 +67,6 @@ end
 # Delay loading Hack, in order to make routing works
 # See: https://github.com/Shopify/dashing/issues/138#issuecomment-24894956
 require 'dashing'
-
-use Rack::Session::Cookie, :secret => ENV['RACK_COOKIE_SECRET']
 
 use OmniAuth::Builder do
   # For additional provider examples please look at 'omni_auth.rb'
