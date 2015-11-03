@@ -24,6 +24,7 @@ configure do
   logger = Logger.new(log_file)
   logger.level = Logger::DEBUG
 
+  set :session_secret, ENV['RACK_COOKIE_SECRET'] ||= 'super secret'
   use Rack::Session::Cookie, :key => 'rack.session',
                              :path => '/',
                              :expire_after => 86400,
