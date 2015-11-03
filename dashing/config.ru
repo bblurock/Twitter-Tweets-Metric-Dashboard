@@ -1,4 +1,5 @@
 require 'omniauth-google-oauth2'
+require 'google-id-token'
 require 'sinatra'
 
 enable :sessions
@@ -45,10 +46,21 @@ get '/auth/:provider/callback' do
   content_type 'text/plain'
   auth = request.env['omniauth.auth'].to_hash
 
-  session[:access_token] = auth['credentials']['token']
-  session[:expires_at] = auth['credentials']['expires_at']
+  # Validate access token by google api endpoint
+  validator = GoogleIDToken::Validator.new
+  jwt = validator.check(auth['extra']['id_token'], auth['extra']['id_info']['aud'], auth['extra']['id_info']['azp'])
 
-  redirect to('/twitter')
+  if jwt
+    # if valid then set seesion ky
+    session[:access_token] = auth['credentials']['token']
+    session[:expires_at] = auth['credentials']['expires_at']
+
+    redirect to('/twitter')
+  else
+    # Put error
+    pp "Cannot validate: #{validator.problem}"
+  end
+
 end
 
 get '/auth/failure' do
