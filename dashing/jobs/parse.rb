@@ -161,8 +161,8 @@ end
 
 def sendParseDataset
 
-    client = Parse.create :application_id => "C7HX2LIkyy7gVxQWWfNMg6rWLYm03wPa9kIdI3T8", # required
-                          :api_key        => "S6uiQbnW4fhJVnVfnKM84vIqzu5M6z59rWXNQhaE", # required
+    client = Parse.create :application_id => ENV["PARSE_APPLICATION_ID"], # required
+                          :api_key        => ENV["PARSE_API_KEY"], # required
                           :quiet          => false  # optional, defaults to false
 
     timeline = Array.new
