@@ -18,6 +18,14 @@ end
 
 set :views, "#{settings.root}/dashboards"
 
+before do
+  if (session[:access_token].nil?  && session[:expires_at].nil?)
+    redirect to('/auth/google_oauth2')
+  else
+    redirect to('/twitter')
+  end
+end
+
 configure do
   log_file = File.open('p.log', 'a+')
   log_file.sync = true
@@ -25,14 +33,6 @@ configure do
   logger.level = Logger::DEBUG
 
   set :logger, logger
-end
-
-get '/' do
-  if (session[:access_token].nil?  && session[:expires_at].nil?)
-    redirect to('/auth/google_oauth2')
-  else
-    redirect to('/twitter')
-  end
 end
 
 get '/auth/:provider/callback' do
@@ -51,8 +51,7 @@ get '/auth/failure' do
 end
 
 get '/twitter' do
-  pp session[:access_token]
-  pp session
+
   if (session[:access_token].nil?  && session[:expires_at].nil?)
       redirect to('/auth/google_oauth2')
   end
