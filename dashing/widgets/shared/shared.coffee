@@ -2,9 +2,9 @@ class Dashing.Shared extends Dashing.Widget
 
   createChart: (seriesOptions) ->
     $('#shared').highcharts 'StockChart',
-      title: text: 'Daily Original Shared Count<br/>(by Twitter Webapp)'
+      title: text: 'Daily Shared Count'
       legend: enabled: true
-      # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
+      subtitle: text: 'includes: "Uploaded by Twitter", "youtu.be", "instagram.com", "vimeo.com", "vine.co"'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true

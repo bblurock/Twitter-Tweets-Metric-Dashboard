@@ -165,6 +165,6 @@ Dashing.on 'ready', ->
     Highcharts.setOptions Highcharts.theme
 
     Highcharts.setOptions global: getTimezoneOffset: (timestamp) ->
-      zone = 'UTC'
+      zone = 'PST'
       timezoneOffset = -moment.tz(timestamp, zone).utcOffset()
       timezoneOffset
