@@ -627,12 +627,12 @@ Twitter.prototype = {
         var tweetsPrototype = Parse.Object.extend("Tweets");
         var skipStep = 1000;
 
-        var queryCallback = function (length, skip) {
+        var queryCallback = function (length, date) {
 
             //console.log("In callback: length: " + length + ", skip: " + skip);
 
             if (length === skipStep) {
-                return doQuery(skip);
+                return doQuery(date);
             }
             else {
                 return Parse.Promise.as();
@@ -640,15 +640,15 @@ Twitter.prototype = {
 
         };
 
-        var doQuery = function (skip) {
+        var doQuery = function (date) {
 
             var i, j;
             var query = new Parse.Query(tweetsPrototype);
 
             query.select("objectId", "id_str", "screen_name");
             query.equalTo("screen_name", name);
-            query.skip(skip);
-            query.limit(skipStep);
+            query.lessThan("createdAt", date);
+            query.limit(1000);
 
             return query.find().then(function (results) {
 
@@ -660,14 +660,12 @@ Twitter.prototype = {
                     }
                 }
 
-                skip += results.length;
-
-                return queryCallback(results.length, skip);
+                return queryCallback(results.length, results[results.length-1].get("createdAt"));
             });
 
         };
 
-        return doQuery(0);
+        return doQuery(new Date());
 
     },
 
@@ -884,12 +882,12 @@ Twitter.prototype = {
         var skipStep = 1000;
         var oldData = [];
 
-        var queryCallback = function (length, skip) {
+        var queryCallback = function (length, date) {
 
-            console.log("In callback: length: " + length + ", skip: " + skip);
+            console.log("In callback: length: " + length );
 
             if (length === skipStep) {
-                return doQuery(skip);
+                return doQuery(date);
             }
             else {
                 return Parse.Promise.as(oldData);
@@ -897,22 +895,20 @@ Twitter.prototype = {
 
         };
 
-        var doQuery = function (skip) {
+        var doQuery = function (date) {
 
             var i, j;
             var query = new Parse.Query(tweetsPrototype);
 
-
             query.select("objectId", "id_str", "screen_name", "favorite_count", "retweet_count");
             query.equalTo("screen_name", name);
-            query.skip(skip);
-            query.limit(skipStep);
+            query.lessThan("createdAt", date);
+            query.limit(1000);
 
             return query.find().then(function (results) {
 
                 _.each(results, function(d)
                 {
-
                     if (d.get("id_str") < maxId)
                     {
                         oldData = oldData.concat(d);
@@ -920,14 +916,14 @@ Twitter.prototype = {
 
                 });
 
-                skip += results.length;
-
-                return queryCallback(results.length, skip);
+                return queryCallback(results.length, results[results.length-1].get("createdAt"));
+            }, function(e) {
+                console.log(JSON.stringify(e));
             });
 
         };
 
-        return doQuery(0);
+        return doQuery(new Date());
 
     },
 
@@ -966,7 +962,6 @@ Twitter.prototype = {
                 });
 
                 return Parse.Promise.when(that.queryOlderTweets(name, maxId)).then(function(result) {
-
 
                     result.map(function(d)
                     {
@@ -1425,7 +1420,7 @@ Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
 
             return twitterParser.fetchUsersTimelineData();
 
-        });
+    });
 
 });
 
