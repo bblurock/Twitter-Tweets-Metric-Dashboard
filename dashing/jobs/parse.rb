@@ -3,7 +3,9 @@ require 'json'
 require 'rest-client'
 require 'pp'
 
-ENV['TZ']='Asia/Taipei'
+# ENV['TZ']='Asia/Taipei'
+
+ENV['TZ']='UTC'
 
 def groupDataByDate(data)
     data.sort! {|x, y| x[0].to_i<=>y[0].to_i}
@@ -87,8 +89,27 @@ def claculateShared(tweets)
             sharedArray[name][timeStr] = 0
         end
 
-        if !tweet["entities_media"].nil? && !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
-            sharedArray[name][timeStr] += 1
+        if !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
+
+            if !tweet["entities_media"].nil?
+                sharedArray[name][timeStr] += 1
+            end
+
+            if !tweet["entities_urls"].nil?
+                urls = JSON.parse(tweet["entities_urls"])
+
+                for url in urls
+                    if (url['expanded_url'].include?('youtube.com')   ||
+                        url['expanded_url'].include?('youtu.be')      ||
+                        url['expanded_url'].include?('instagram.com') ||
+                        url['expanded_url'].include?('vimeo.com')     ||
+                        url['expanded_url'].include?('vine.co'))
+                        sharedArray[name][timeStr] += 1
+                        break
+                    end
+                end
+            end
+
         end
 
     end
@@ -170,8 +191,12 @@ def sendParseDataset
 
     # Get Data from Parse.com
     tweets = getTimelineData(client, "metioning_history")
+
     groupedMentionedArray = claculateMentioned(tweets)
     groupedSharedArray = claculateShared(tweets)
+
+    send_event('mentioned',  { data: groupedMentionedArray.to_json })
+    send_event('shared',     { data: groupedSharedArray.to_json })
 
     # Get Data from Parse.com
     timeline = getTimelineData(client, "twitter_user_timeline")
@@ -237,8 +262,6 @@ def sendParseDataset
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
     send_event('followers',  { data: followerChartData.to_json })
-    send_event('mentioned',  { data: groupedMentionedArray.to_json })
-    send_event('shared',     { data: groupedSharedArray.to_json })
 
 end
 
