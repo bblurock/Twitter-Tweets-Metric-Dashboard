@@ -3,8 +3,6 @@ require 'json'
 require 'rest-client'
 require 'pp'
 
-# ENV['TZ']='Asia/Taipei'
-
 ENV['TZ']='UTC'
 
 def groupDataByDate(data)
@@ -195,6 +193,8 @@ def sendParseDataset
     groupedMentionedArray = claculateMentioned(tweets)
     groupedSharedArray = claculateShared(tweets)
 
+    groupedMentionedArray.sort! {|x, y| x['name']<=>y['name']}
+    groupedSharedArray.sort! {|x, y| x['name']<=>y['name']}
     send_event('mentioned',  { data: groupedMentionedArray.to_json })
     send_event('shared',     { data: groupedSharedArray.to_json })
 
@@ -259,12 +259,16 @@ def sendParseDataset
         followerChartData.push hash
     end
 
+    retweetedChartData.sort! {|x, y| x['name']<=>y['name']}
+    favoritedChartData.sort! {|x, y| x['name']<=>y['name']}
+    followerChartData.sort! {|x, y| x['name']<=>y['name']}
+
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
     send_event('followers',  { data: followerChartData.to_json })
 
 end
 
-SCHEDULER.every '180s', :first_in => 0 do |job|
+SCHEDULER.every '60s', :first_in => 0 do |job|
     sendParseDataset
 end

@@ -20,7 +20,21 @@ class Dashing.Shared extends Dashing.Widget
       plotOptions:
         series:
           lineWidth: 1
-          # compares: 'value'
+          events: legendItemClick: (event) ->
+            index = @index
+
+            # toggle current graph
+            if @visible then @.hide() else @.show()
+
+            # Renew local storage
+            localStorage.setItem(@name, (if @visible then 'true' else 'false'))
+
+            # Sync every graph
+            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited')
+            chart.each ->
+              c = $(@).highcharts()
+              if c.series[index].visible then c.series[index].hide() else c.series[index].show()
+              return
         spline:
           marker:
             enabled: true
@@ -32,12 +46,9 @@ class Dashing.Shared extends Dashing.Widget
     return
 
   onData: (data) ->
-    
-    data = JSON.parse(data.data)
-    
     legendDefault = {
       "tickleapp": true,
-      "wonderworkshop": false, 
+      "wonderworkshop": false,
       "spheroedu": false,
       "gotynker": false,
       "hopscotch": false,
@@ -47,8 +58,13 @@ class Dashing.Shared extends Dashing.Widget
       "scratch": false,
       "trinketapp": false
     }
-    
+
+    data = JSON.parse(data.data)
     data.map (x) ->
-      x.visible = legendDefault[x.name]
-      
+      storageVisibility = localStorage.getItem(x.name)
+      if storageVisibility
+        x.visible = if storageVisibility == 'true' then true else false
+      else
+        x.visible = legendDefault[x.name]
+
     @createChart(data)
