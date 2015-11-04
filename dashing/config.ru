@@ -86,7 +86,7 @@ require 'dashing'
 
 use OmniAuth::Builder do
   # For additional provider examples please look at 'omni_auth.rb'
-  provider :google_oauth2, ENV['GOOGLE_KEY'], ENV['GOOGLE_SECRET'], { :hd => "tickleapp.com" }
+  provider :google_oauth2, ENV['GOOGLE_KEY'], ENV['GOOGLE_SECRET'], { :hd => ["wantoto.com", "tickleapp.com"] }
 end
 
 
