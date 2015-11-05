@@ -1,0 +1,24 @@
+<div id="users" class="users-container">
+  <!--<h3><img data-bind-src='current_comment.avatar'/><span data-bind='current_comment.name' class="name"></span></h3>-->
+  <!--<p class="comment" data-bind='quote'></p>-->
+
+  <div class="user-card card">
+    <div class="user-avatar"><img data-bind-src="userBannerUrl" class="user-bg"><img data-bind-src="userImageUrl" class="user-pic"></div>
+    <header>
+      <h3 data-bind="userScreenName"></h3>
+    </header>
+    <div class="status" data-bind="userDescription"></div>
+    <ul class="stats">
+      <li><a><strong data-bind="userFollowers"></strong><span>Follwers</span></a></li>
+      <li><a><strong data-bind="userFavorites"></strong><span>Favorites</span></a></li>
+      <li><a><strong data-bind="userTweets"></strong><span>Tweets</span></a></li>
+    </ul>
+  </div>
+
+  <span class="custom-dropdown small">
+    <select id="screenNames" data-event-change='nameChanged'>
+      <option></option>
+    </select>
+</span>
+
+</div>

@@ -247,7 +247,7 @@ h3 {
   padding-top: 5px;
 }
 
-.retweeted, .favorited, .followers, .mentioned, .shared{
+.retweeted, .favorited, .followers, .mentioned, .shared, .users{
   padding: 0;
   margin: 0 auto;
 }
@@ -255,6 +255,170 @@ h3 {
 #chartdiv {
   width	: 100%;
   //height : 500px;
+}
+
+
+.card {
+  background: white;
+  border-radius: 0.3rem;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  margin-bottom: 0.5em; }
+
+.user-card .user-avatar {
+  border-top-left-radius: 0.3rem;
+  border-top-right-radius: 0.3rem;
+  text-align: center; }
+.user-card .user-avatar .user-bg {
+  width: 100%;
+  border-top-left-radius: 0.3rem;
+  border-top-right-radius: 0.3rem;
+}
+.user-card .user-avatar .user-bg:after {
+  content: "";
+  width: 100%;
+  height: 100%;
+  background: red; }
+.user-card .user-avatar .user-pic {
+  background: white;
+  padding: 0.25em;
+  border-radius: 0.3rem;
+  margin-top: -10em;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.35); }
+.user-card header, .user-card .status {
+  text-align: center;
+  padding: 0 1.5em; }
+.user-card header h3 {
+  margin-top: 0.35em;
+  color: #666;
+  margin-bottom: 0; }
+.user-card header p {
+  color: #717a7e;
+  font-size: 1.2em;
+  margin-top: 0;
+  margin-bottom: 0.5em; }
+.user-card .status {
+  color: #75787b;
+  font-size: 0.7em; }
+.user-card .stats {
+  margin-top: 1em;
+  padding: 0;
+  list-style: none;
+  display: table;
+  width: 100.15%; }
+.user-card .stats li {
+  margin: 0;
+  padding: 0;
+  font-size: 0.8em;
+  width: 33.33334%;
+  display: table-cell;
+  text-align: center;
+  border-left: 0.1em solid transparent; }
+.user-card .stats li:first-child {
+  border-left: 0; }
+.user-card .stats li:first-child a {
+  border-bottom-left-radius: 0.3rem; }
+.user-card .stats li:last-child a {
+  border-bottom-right-radius: 0.3rem; }
+.user-card .stats li a, .user-card .stats li strong {
+  display: block; }
+.user-card .stats li a {
+  background: #f7f7f7;
+  padding: 1em 0;
+  color: #46494c; }
+.user-card .stats li a strong, .user-card .stats li a span {
+  font-weight: 600;
+  line-height: 1; }
+.user-card .stats li a strong {
+  font-size: 0.9em;
+}
+.user-card .stats li a span {
+  font-size: 0.7em;
+  color: #717a7e;
+}
+.user-card .stats li a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1c84d4; }
+.user-card .stats li a:hover span {
+  color: #1d8cdf; }
+
+.big {
+  font-size: 1.2em;
+}
+
+.small {
+  font-size: .7em;
+}
+
+.square {
+  width: .7em;
+  height: .7em;
+  margin: .5em;
+  display: inline-block;
+  background: #2c3e50;
+}
+
+/* Custom dropdown */
+.custom-dropdown {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  width: 100%;
+}
+
+.custom-dropdown select {
+  background-color: #1abc9c;
+  color: #fff;
+  font-size: inherit;
+  padding: .5em;
+  padding-right: 2.5em;
+  border: 0;
+  margin: 0;
+  border-radius: 3px;
+  text-indent: 0.01px;
+  text-overflow: '';
+  -webkit-appearance: button; /* hide default arrow in chrome OSX */
+  width: 100%;
+}
+
+.custom-dropdown::before,
+.custom-dropdown::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.custom-dropdown::after { /*  Custom dropdown arrow */
+  content: "\25BC";
+  height: 1em;
+  font-size: .625em;
+  line-height: 1;
+  right: 1.2em;
+  top: 50%;
+  margin-top: -.5em;
+}
+
+.custom-dropdown::before { /*  Custom dropdown arrow cover */
+  width: 2em;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 0 3px 3px 0;
+}
+
+.custom-dropdown select[disabled] {
+  color: rgba(0,0,0,.3);
+}
+
+.custom-dropdown select[disabled]::after {
+  color: rgba(0,0,0,.1);
+}
+
+.custom-dropdown::before {
+  background-color: rgba(0,0,0,.15);
+}
+
+.custom-dropdown::after {
+  color: rgba(0,0,0,.4);
 }
 
 

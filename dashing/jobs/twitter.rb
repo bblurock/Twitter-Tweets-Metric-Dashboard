@@ -1,4 +1,6 @@
 require 'twitter'
+require 'json'
+require 'pp'
 
 twitter = Twitter::REST::Client.new do |config|
   config.consumer_key = '6IaI7dBybFyO1jkHmAk4b0yzq'
@@ -8,6 +10,35 @@ twitter = Twitter::REST::Client.new do |config|
 end
 
 search_term = URI::encode('@tickleapp')
+
+SCHEDULER.every '30s', :first_in => 0 do |job|
+  begin
+    timelines = Array.new
+    users = ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"]
+
+    users.each do |user|
+      timeline = twitter.user(user);
+      pp user
+
+      if timeline
+        hash = {
+          name: timeline.screen_name,
+          follower: timeline.followers_count,
+          favorites: timeline.favourites_count,
+          tweets: timeline.statuses_count,
+          description: timeline.description,
+          profile_image_url: timeline.profile_image_url,
+          profile_banner_url: timeline.profile_banner_url
+        }
+       timelines.push hash
+      end
+
+    end
+
+    send_event('users', data: timelines)
+
+  end
+end
 
 SCHEDULER.every '10m', :first_in => 0 do |job|
   begin
