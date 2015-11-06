@@ -938,21 +938,33 @@ Twitter.prototype = {
             promise = promise.then(function (nameIndex)
             {
 
-                var name = that.screenNames[nameIndex];
-                var length = that.data[name].tweetsDetails.length;
+                var name, length, data, maxId,
+                    favorited_num = 0,
+                    retweeted_num = 0;
+
+                name = that.screenNames[nameIndex];
+                length = that.data[name].tweetsDetails.length;
 
                 if (length == 0)
                 {
                     return Parse.Promise.as(nameIndex+1);
                 }
 
-                var data = that.data[name].tweetsDetails;
-                var maxId = data[length - 1].id_str;
-                var favorited_num = 0;
-                var retweeted_num = 0;
+                data = that.data[name].tweetsDetails;
+
+                // sort id_str in "Ascending", before getting the search window boundry of id_str
+                data.sort(function(a, b){
+                    if(a.id_str < b.id_str)
+                        return 1;
+
+                    if(a.id_str > b.id_str)
+                        return -1;
+
+                    return 0;
+                });
 
                 // Set oldest id_str of current search window
-                that.data[name].oldestIdStrOfCurrentSearchWindow = maxId;
+                that.data[name].oldestIdStrOfCurrentSearchWindow = maxId = data[length - 1].id_str;
                 that.data[name].newestIdStrOfCurrentSearchWindow = data[0].id_str;
 
                 data.map(function(d)
