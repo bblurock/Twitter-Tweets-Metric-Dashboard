@@ -918,7 +918,7 @@ Twitter.prototype = {
 
                 console.log(results.length);
 
-                if (results.length == 0) {
+                if (results.length != 0) {
                     date = results[results.length-1].get("createdAt");
                 }
 
