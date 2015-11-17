@@ -660,7 +660,11 @@ Twitter.prototype = {
                     }
                 }
 
-                return queryCallback(results.length, results[results.length-1].get("createdAt"));
+                if (results.length != 0) {
+                    date = results[results.length-1].get("createdAt");
+                }
+
+                return queryCallback(results.length, date);
             });
 
         };
