@@ -900,7 +900,7 @@ Twitter.prototype = {
             var i, j;
             var query = new Parse.Query(tweetsPrototype);
 
-            query.select("objectId", "id_str", "screen_name", "favorite_count", "retweet_count");
+            query.select("objectId", "id_str", "screen_name", "favorite_count", "retweet_count", "createdAt");
             query.equalTo("screen_name", name);
             query.lessThan("createdAt", date);
             query.limit(1000);
