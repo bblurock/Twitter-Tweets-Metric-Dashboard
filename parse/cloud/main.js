@@ -916,7 +916,13 @@ Twitter.prototype = {
 
                 });
 
-                return queryCallback(results.length, results[results.length-1].get("createdAt"));
+                console.log(results.length);
+
+                if (results.length == 0) {
+                    date = results[results.length-1].get("createdAt");
+                }
+
+                return queryCallback(results.length, date);
             }, function(e) {
                 console.log(JSON.stringify(e));
             });
@@ -1446,7 +1452,8 @@ Parse.Cloud.job("twitterParser", function (request, status) {
     var twitterParser = new Twitter(
         {
             tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
+            screenNames: ["codeorg", "scratch", "trinketapp"];
 
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
