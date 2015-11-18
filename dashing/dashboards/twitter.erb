@@ -1,0 +1,47 @@
+<% content_for :title do %>My super sweet dashboard<% end %>
+
+<script type='text/javascript'>
+$(function() {
+Dashing.gridsterLayout('[{"col":1,"row":1,"size_x":2,"size_y":1},{"col":3,"row":1,"size_x":2,"size_y":1},{"col":1,"row":3,"size_x":1,"size_y":1},{"col":1,"row":2,"size_x":2,"size_y":1},{"col":3,"row":2,"size_x":2,"size_y":1},{"col":5,"row":1,"size_x":2,"size_y":1},{"col":6,"row":2,"size_x":1,"size_y":2},{"col":5,"row":2,"size_x":1,"size_y":1}]')
+});
+</script>
+
+<div class="gridster">
+  <ul>
+
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="retweeted" data-view="Retweeted" data-title="Retweeted Chart" style="background-color:#f39c12;"></div>
+    </li>
+
+    <li data-row="1" data-col="3" data-sizex="2" data-sizey="1">
+        <div data-id="favorited" data-view="Favorited" data-title="Favorited Chart" style="background-color:#f39c12;"></div>
+    </li>
+    
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-id="twitter_mentions" data-view="Comments" style="background-color:#00afd7;" data-moreinfo="Tweets @sourceclear" ></div>
+      <i class="icon-twitter icon-background"></i>
+    </li>
+    
+    <li data-row="3" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="followers" data-view="Followers"  data-title="Followers" style="background-color:#00afd7;"></div>
+    </li>
+    
+    <li data-row="3" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="mentioned" data-view="Mentioned"  data-title="Mentioned" style="background-color:#00afd7;"></div>
+    </li>
+
+    <li data-row="3" data-col="3" data-sizex="2" data-sizey="1">
+      <div data-id="shared" data-view="Shared"  data-title="Shared" style="background-color:#00afd7;"></div>
+    </li>
+
+    <li data-row="3" data-col="5" data-sizex="1" data-sizey="2">
+        <a class="twitter-timeline" href="https://twitter.com/tickleapp" data-widget-id="662145564952268800">Tweets by @tickleapp</a>
+        <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+    </li>
+
+    <li data-row="1" data-col="5" data-sizex="1" data-sizey="1">
+        <div data-id="users" data-view="Users"  data-title="Users" style=""></div>
+    </li>
+    
+  </ul>
+</div>
