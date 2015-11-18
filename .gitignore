@@ -59,6 +59,7 @@ target/
 .DS_Store
 .elasticbeanstalk/
 
-parse/node_modules/
-dashing/vendor/
-node_modules/
+node_modules
+parse/node_modules
+dashing/vendor
+dashing/.vscode
