@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "Tickle Dashboard": {
+      "applicationId": ""
+    },
+    "_default": {
+      "link": "Tickle Dashboard"
+    }
+  }
+}
