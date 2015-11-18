@@ -1,0 +1,46 @@
+{
+  "name": "educator-crawler",
+  "version": "0.0.0",
+  "description": "A parser that parse event host information form scratch day and Euro-Code-day etc..",
+  "homepage": "",
+  "author": {
+    "name": "TickleLab",
+    "email": "llwbenson@gmail.com",
+    "url": ""
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "keywords": [],
+  "repository": "https://github.com/bblurock/dashboard.git",
+  "devDependencies": {
+    "gulp": "^3.6.0",
+    "gulp-eslint": "^1.0.0",
+    "gulp-exclude-gitignore": "^1.0.0",
+    "gulp-istanbul": "^0.9.0",
+    "gulp-mocha": "^2.0.0",
+    "gulp-plumber": "^1.0.0",
+    "gulp-nsp": "^0.4.5",
+    "gulp-babel": "^5.1.0",
+    "del": "^2.0.2",
+    "babel-core": "^5.5.0",
+    "isparta": "^3.0.3"
+  },
+  "scripts": {
+    "prepublish": "gulp prepublish",
+    "test": "gulp"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "colors": "^1.1.2",
+    "csv-generate": "^1.0.0",
+    "csv-stringify": "0.0.8",
+    "fs": "0.0.2",
+    "googlemaps": "^1.0.2",
+    "phantom": "^0.8.0",
+    "phantomjs": "^1.9.18",
+    "simplecrawler": "^0.5.4",
+    "yargs": "^3.29.0"
+  }
+}
