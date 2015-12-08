@@ -191,12 +191,14 @@ def sendParseDataset
     tweets = getTimelineData(client, "metioning_history")
 
     groupedMentionedArray = claculateMentioned(tweets)
-    groupedSharedArray = claculateShared(tweets)
-
     groupedMentionedArray.sort! {|x, y| x['name']<=>y['name']}
-    groupedSharedArray.sort! {|x, y| x['name']<=>y['name']}
     send_event('mentioned',  { data: groupedMentionedArray.to_json })
+    groupedMentionedArray = Array.new
+    
+    groupedSharedArray = claculateShared(tweets)
+    groupedSharedArray.sort! {|x, y| x['name']<=>y['name']}
     send_event('shared',     { data: groupedSharedArray.to_json })
+    groupedSharedArray = Array.new
 
     # Get Data from Parse.com
     timeline = getTimelineData(client, "twitter_user_timeline")
@@ -266,7 +268,10 @@ def sendParseDataset
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
     send_event('followers',  { data: followerChartData.to_json })
-
+    
+    retweetedChartData = Array.new 
+    favoritedChartData = Array.new
+    followerChartData = Array.new
 end
 
 SCHEDULER.every '60s', :first_in => 0 do |job|
