@@ -37,6 +37,24 @@ def groupDataByDate(data)
     result
 end
 
+def mergeMetrics(target, metrics, pageMetrics)
+    pageMetrics[target].each do |name, timesStrings|
+        # Init non-existing screen_name
+        if !metrics[target].include? name
+            metrics[target][name] = Hash.new
+        end
+        
+        timesStrings.each do |timeStr, number| 
+            # Init grouping by Date
+            if !metrics[target][name].include? timeStr
+                metrics[target][name][timeStr] = 0
+            end
+            metrics[target][name][timeStr] += number
+        end
+
+    end
+end
+
 def getTimelineData(client, table)
     result = Array.new
     metrics = Hash.new
@@ -65,40 +83,12 @@ def getTimelineData(client, table)
       # Blocks given means we should do the calculation on the fly when getting data from Parse.com
       if block_given?
         pageMetrics = Hash.new
-        pageMetrics = yield page  
+        pageMetrics = yield page
         
         # Get shared data from Callback Calculation
-        pageMetrics["shared"].each do |name, timesStrings|
-            # Init non-existing screen_name
-            if !metrics["shared"].include? name
-                metrics["shared"][name] = Hash.new
-            end
-            
-            timesStrings.each do |timeStr, number| 
-                # Init grouping by Date
-                if !metrics["shared"][name].include? timeStr
-                    metrics["shared"][name][timeStr] = 0
-                end
-                metrics["shared"][name][timeStr] += number
-            end
-
-        end
-        
+        mergeMetrics("shared", metrics, pageMetrics);
         # Get shared data from Callback Calculation
-        pageMetrics["mentioned"].each do |name, timesStrings|
-            # Init non-existing screen_name
-            if !metrics["mentioned"].include? name
-                metrics["mentioned"][name] = Hash.new
-            end
-            
-            timesStrings.each do |timeStr, number| 
-                # Init grouping by Date
-                if !metrics["mentioned"][name].include? timeStr
-                    metrics["mentioned"][name][timeStr] = 0
-                end
-                metrics["mentioned"][name][timeStr] += number
-            end
-        end
+        mergeMetrics("mentioned", metrics, pageMetrics);        
       else
         # If No Calculation Needs to be done
         result += page
