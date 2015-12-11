@@ -190,7 +190,7 @@ def groupeHashIntoKeyData(inputHash)
     groupedArray = Array.new
     
     # Format grouping data
-    inputArray.each do |key, array|
+    inputHash.each do |key, array|
         result = Array.new
 
         array.each do |dateKey, num|
