@@ -39,6 +39,9 @@ end
 
 def getTimelineData(client, table)
     result = Array.new
+    metrics = Hash.new
+    metrics["shared"] = Hash.new 
+    metrics["mentioned"] = Hash.new 
     skip = 0
 
     maxCreatedAtTime = 0;
@@ -54,23 +57,64 @@ def getTimelineData(client, table)
               q.less_than("createdAt", maxCreatedAtTime)
           end
       end.get
-
-      result += page
-
+      
       if page.length != 0
         maxCreatedAtTime = page[page.length - 1]["createdAt"]
       end
+      
+      # Blocks given means we should do the calculation on the fly when getting data from Parse.com
+      if block_given?
+        pageMetrics = Hash.new
+        pageMetrics = yield page  
+        
+        # Get shared data from Callback Calculation
+        pageMetrics["shared"].each do |name, timesStrings|
+            # Init non-existing screen_name
+            if !metrics["shared"].include? name
+                metrics["shared"][name] = Hash.new
+            end
+            
+            timesStrings.each do |timeStr, number| 
+                # Init grouping by Date
+                if !metrics["shared"][name].include? timeStr
+                    metrics["shared"][name][timeStr] = 0
+                end
+                metrics["shared"][name][timeStr] += number
+            end
+
+        end
+        
+        # Get shared data from Callback Calculation
+        pageMetrics["mentioned"].each do |name, timesStrings|
+            # Init non-existing screen_name
+            if !metrics["mentioned"].include? name
+                metrics["mentioned"][name] = Hash.new
+            end
+            
+            timesStrings.each do |timeStr, number| 
+                # Init grouping by Date
+                if !metrics["mentioned"][name].include? timeStr
+                    metrics["mentioned"][name][timeStr] = 0
+                end
+                metrics["mentioned"][name][timeStr] += number
+            end
+        end
+      else
+        # If No Calculation Needs to be done
+        result += page
+      end
 
       break if page.length == 0
+      
+      page = nil;
     end
 
-    result
+    if result.empty? then metrics else result end
 end
 
 def claculateShared(tweets)
 
     sharedArray = Hash.new
-    groupedSharedArray = Array.new
 
     for tweet in tweets
         name = tweet["mentioning"]
@@ -107,36 +151,16 @@ def claculateShared(tweets)
                     end
                 end
             end
-
         end
-
     end
-
-    # Format grouping data
-    sharedArray.each do |key, array|
-        result = Array.new
-
-        array.each do |dateKey, num|
-            result.push [DateTime.parse(dateKey).to_time.to_i * 1000, num]
-        end
-
-        # Sorting timestamp
-        result.sort! {|x, y| x[0].to_i<=>y[0].to_i}
-
-        hash = {"name"=>key, "data"=>result}
-
-        groupedSharedArray.push hash
-    end
-
-    groupedSharedArray
-
+    
+    sharedArray
 end
 
 def claculateMentioned(tweets)
 
     mentionedArray = Hash.new
-    groupedMentionedArray = Array.new
-
+    
     for tweet in tweets
         name = tweet["mentioning"]
         timestamp = DateTime.parse(tweet["created_at"]).to_time.to_i * 1000
@@ -157,9 +181,16 @@ def claculateMentioned(tweets)
         end
 
     end
+    
+    mentionedArray
+end
 
+def groupeHashIntoKeyData(inputHash)
+
+    groupedArray = Array.new
+    
     # Format grouping data
-    mentionedArray.each do |key, array|
+    inputHash.each do |key, array|
         result = Array.new
 
         array.each do |dateKey, num|
@@ -171,11 +202,10 @@ def claculateMentioned(tweets)
 
         hash = {"name"=>key, "data"=>result}
 
-        groupedMentionedArray.push hash
+        groupedArray.push hash
     end
-
-    groupedMentionedArray
-
+    
+    groupedArray
 end
 
 def sendParseDataset
@@ -185,18 +215,28 @@ def sendParseDataset
                           :quiet          => false  # optional, defaults to false
 
     timeline = Array.new
-    tweets = Array.new
+    mentionedAndShared = Hash.new
 
     # Get Data from Parse.com
-    tweets = getTimelineData(client, "metioning_history")
-
-    groupedMentionedArray = claculateMentioned(tweets)
-    groupedSharedArray = claculateShared(tweets)
-
-    groupedMentionedArray.sort! {|x, y| x['name']<=>y['name']}
-    groupedSharedArray.sort! {|x, y| x['name']<=>y['name']}
-    send_event('mentioned',  { data: groupedMentionedArray.to_json })
-    send_event('shared',     { data: groupedSharedArray.to_json })
+    mentionedAndShared = getTimelineData(client, "metioning_history") { |tweets| 
+      metrics = Hash.new
+      
+      metrics["mentioned"] = claculateMentioned(tweets)
+      metrics["shared"] = claculateShared(tweets)
+      
+      metrics
+    }
+    
+    mentionedAndShared["mentioned"] = groupeHashIntoKeyData(mentionedAndShared["mentioned"]);
+    mentionedAndShared["mentioned"].sort! {|x, y| x['name']<=>y['name']}
+    send_event('mentioned', { data: mentionedAndShared["mentioned"].to_json })
+    
+    mentionedAndShared["shared"] = groupeHashIntoKeyData(mentionedAndShared["shared"]);
+    mentionedAndShared["shared"].sort! {|x, y| x['name']<=>y['name']}
+    send_event('shared', { data: mentionedAndShared["shared"].to_json })
+    
+    # Reset
+    mentionedAndShared = Hash.new
 
     # Get Data from Parse.com
     timeline = getTimelineData(client, "twitter_user_timeline")
@@ -266,7 +306,10 @@ def sendParseDataset
     send_event('retweeted',  { data: retweetedChartData.to_json })
     send_event('favorited',  { data: favoritedChartData.to_json })
     send_event('followers',  { data: followerChartData.to_json })
-
+    
+    retweetedChartData = Array.new 
+    favoritedChartData = Array.new
+    followerChartData = Array.new
 end
 
 SCHEDULER.every '60s', :first_in => 0 do |job|
