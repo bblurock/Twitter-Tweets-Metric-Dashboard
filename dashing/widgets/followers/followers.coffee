@@ -2,11 +2,9 @@ class Dashing.Followers extends Dashing.Widget
 
   createChart: (data) ->
     $('#followers').highcharts 'StockChart',
-      # chart: type: 'spline'
       title: text: 'Daily Followers Growth'
       legend: 
         enabled: true
-      # subtitle: text: 'This chart display the new fllowers amount gained by each account'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true

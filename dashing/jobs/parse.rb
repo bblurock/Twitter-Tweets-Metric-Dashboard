@@ -6,9 +6,10 @@ require 'pp'
 ENV['TZ']='UTC'
 
 def groupDataByDate(data)
+    # sort by timestamp
     data.sort! {|x, y| x[0].to_i<=>y[0].to_i}
 
-    # Convert accumlated data into differentiated data
+    # Convert accumlated data into differentiated data, ex: the number of follower grow every date, however, we want to show differentiated number of every day 
     diff = Array.new
     data.each_index { |i|
         if (i - 1).to_i >= 0
@@ -37,6 +38,10 @@ def groupDataByDate(data)
     result
 end
 
+# mergeMetrics
+# --------
+#
+# Merge the new calculted shared data into the old one 
 def mergeMetrics(target, metrics, pageMetrics)
     pageMetrics[target].each do |name, timesStrings|
         # Init non-existing screen_name
@@ -55,6 +60,13 @@ def mergeMetrics(target, metrics, pageMetrics)
     end
 end
 
+# getTimelineData
+# --------
+#
+# Get data from Parse.com
+#
+# ＠param {object} Parse object 
+# @return {string} Parse table name
 def getTimelineData(client, table)
     result = Array.new
     metrics = Hash.new
@@ -66,6 +78,7 @@ def getTimelineData(client, table)
 
     loop do
 
+      # Parse only allow fetching 1000 records with one query
       page = client.query(table).tap do |q|
           q.order_by = "createdAt"
           q.order = :descending
@@ -83,11 +96,13 @@ def getTimelineData(client, table)
       # Blocks given means we should do the calculation on the fly when getting data from Parse.com
       if block_given?
         pageMetrics = Hash.new
-        pageMetrics = yield page
         
-        # Get shared data from Callback Calculation
+        # Current page's metric is calculated by block given
+        pageMetrics = yield page 
+        
+        # Merge the new calculted shared data into the old one
         mergeMetrics("shared", metrics, pageMetrics);
-        # Get shared data from Callback Calculation
+        # Merge the new calculted mentioned data into the old one
         mergeMetrics("mentioned", metrics, pageMetrics);        
       else
         # If No Calculation Needs to be done
@@ -102,6 +117,14 @@ def getTimelineData(client, table)
     if result.empty? then metrics else result end
 end
 
+
+# claculateShared
+# --------
+#
+# Grouping raw tweets into a two dimentional array with in [name][tweetTimeString], the value indicates the number of tweets containing media
+#
+# ＠param {array} tweets The raw tweets 
+# @return {array} Grouped by name and date
 def claculateShared(tweets)
 
     sharedArray = Hash.new
@@ -121,15 +144,18 @@ def claculateShared(tweets)
             sharedArray[name][timeStr] = 0
         end
 
+        # Exclude Retweet an Tweet mentioning himself
         if !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
 
+            # Tweets containing image or video
             if !tweet["entities_media"].nil?
                 sharedArray[name][timeStr] += 1
             end
 
+            # We count resource like youtube, instagram, vimeo, vine
             if !tweet["entities_urls"].nil?
                 urls = JSON.parse(tweet["entities_urls"])
-
+                 
                 for url in urls
                     if (url['expanded_url'].include?('youtube.com')   ||
                         url['expanded_url'].include?('youtu.be')      ||
@@ -147,6 +173,13 @@ def claculateShared(tweets)
     sharedArray
 end
 
+# claculateMentioned
+# --------
+#
+# Grouping raw tweets into a two dimentional array with in [name][tweetTimeString], the value indicates the number of tweets that mentioning each user
+#
+# ＠param {array} tweets The raw tweets 
+# @return {array} Grouped by name and date
 def claculateMentioned(tweets)
 
     mentionedArray = Hash.new
@@ -166,15 +199,22 @@ def claculateMentioned(tweets)
             mentionedArray[name][timeStr] = 0
         end
 
+        # Exclude Retweet an Tweet mentioning himself
         if !tweet["in_reply_to_status_id"].nil? && !tweet["text"].include?('RT @') && (tweet["user_screen_name"] != name)
             mentionedArray[name][timeStr] += 1
         end
-
     end
     
     mentionedArray
 end
 
+# groupeHashIntoKeyData
+# --------
+#
+# The data required by Highstock widget should be format in this form {"name"=> {screenName}, "data" => {timestamp}}   
+#
+# ＠param {array} tweets The raw tweets 
+# @return {array} Array of hash
 def groupeHashIntoKeyData(inputHash)
 
     groupedArray = Array.new
@@ -198,8 +238,15 @@ def groupeHashIntoKeyData(inputHash)
     groupedArray
 end
 
-def sendParseDataset
 
+# sendParseDataset
+# --------
+#
+# Main function   
+#
+def sendParseDataset
+    # All the data used by this script is fetch by Parse API
+    # Hence, you might need to set up your PARSE_APPLICATION_ID and PARSE_API_KEY in ENV
     client = Parse.create :application_id => ENV["PARSE_APPLICATION_ID"], # required
                           :api_key        => ENV["PARSE_API_KEY"], # required
                           :quiet          => false  # optional, defaults to false
@@ -207,7 +254,7 @@ def sendParseDataset
     timeline = Array.new
     mentionedAndShared = Hash.new
 
-    # Get Data from Parse.com
+    # Get Data from Parse.com, we provides a block which calculate the fetched data on the fly
     mentionedAndShared = getTimelineData(client, "metioning_history") { |tweets| 
       metrics = Hash.new
       
@@ -217,18 +264,23 @@ def sendParseDataset
       metrics
     }
     
+    # Caculated Mentioning Tweets
     mentionedAndShared["mentioned"] = groupeHashIntoKeyData(mentionedAndShared["mentioned"]);
     mentionedAndShared["mentioned"].sort! {|x, y| x['name']<=>y['name']}
     send_event('mentioned', { data: mentionedAndShared["mentioned"].to_json })
     
+    # Reset
+    mentionedAndShared["mentioned"] = Hash.new
+    
+    # Caculated Mentioning Shared
     mentionedAndShared["shared"] = groupeHashIntoKeyData(mentionedAndShared["shared"]);
     mentionedAndShared["shared"].sort! {|x, y| x['name']<=>y['name']}
     send_event('shared', { data: mentionedAndShared["shared"].to_json })
     
     # Reset
-    mentionedAndShared = Hash.new
+    mentionedAndShared["shared"] = Hash.new
 
-    # Get Data from Parse.com
+    # Get Data from Parse.com of users' historical status
     timeline = getTimelineData(client, "twitter_user_timeline")
 
     retweetedTimeline = Hash.new

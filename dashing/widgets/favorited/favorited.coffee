@@ -9,10 +9,6 @@ class Dashing.Favorited extends Dashing.Widget
         allButtonsEnabled: true
         enable: true
       yAxis:
-#        min: 500
-#        max: 80000
-#        labels: formatter: ->
-#          (if @value > 0 then ' + ' else '') + @value + '%'
         plotLines: [ {
           value: 0
           width: 1

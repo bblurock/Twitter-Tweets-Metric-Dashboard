@@ -4,7 +4,6 @@ class Dashing.Mentioned extends Dashing.Widget
     $('#mentioned').highcharts 'StockChart',
       title: text: 'Daily Mentioned Count'
       legend: enabled: true
-      # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true
