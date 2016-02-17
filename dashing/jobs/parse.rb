@@ -349,9 +349,14 @@ def sendParseDataset
     send_event('favorited',  { data: favoritedChartData.to_json })
     send_event('followers',  { data: followerChartData.to_json })
     
+    retweetedTimeline = Hash.new
+    favoriteTimeLine = Hash.new
+    followers = Hash.new
+    
     retweetedChartData = Array.new 
     favoritedChartData = Array.new
     followerChartData = Array.new
+    timeline = Array.new
 end
 
 SCHEDULER.every '60s', :first_in => 0 do |job|
