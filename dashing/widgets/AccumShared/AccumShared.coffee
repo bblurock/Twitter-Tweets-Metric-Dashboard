@@ -1,4 +1,5 @@
 class Dashing.Accumshared extends Dashing.Widget
+  oriData: {}
 
   createChart: (seriesOptions) ->
     $('#accumshared').highcharts 'StockChart',
@@ -44,10 +45,20 @@ class Dashing.Accumshared extends Dashing.Widget
       series: seriesOptions
     return
 
-  onData: (data) ->
+  ready: ->
+    that = this
+    console.log 'ready'
+
+    $('#accumsetting select').on 'change', ->
+      localStorage.setItem('accumsetting', $(this).val())
+      console.log $(this).val()
+      that.redraw()
+
+  redraw: ()->
+
     legendDefault = {
       "tickleapp": true,
-      "wonderworkshop": false, 
+      "wonderworkshop": false,
       "spheroedu": false,
       "gotynker": false,
       "hopscotch": false,
@@ -58,13 +69,45 @@ class Dashing.Accumshared extends Dashing.Widget
       "trinketapp": false
     }
 
-    data = JSON.parse(data.data)
-    console.log data
-    data.map (x) ->
-      storageVisibility = localStorage.getItem(x.name)
+    data = $.extend(true,{},@oriData);
+
+    console.log 'in redraw'
+    console.log @oriData
+
+    accum = localStorage.getItem('accumsetting') || 30;
+
+    for key of data
+      i = data[key].data.length - 1
+
+      while i - accum >= 0
+        result = 0
+        j = 0
+
+        while j < accum
+          result += data[key].data[i - j][1]
+          j++
+        data[key].data[i][1] = result
+        i--
+
+    for key of data
+      storageVisibility = localStorage.getItem(data[key].name)
       if storageVisibility
-        x.visible = if storageVisibility == 'true' then true else false
+        data[key].visible = if storageVisibility == 'true' then true else false
       else
-        x.visible = legendDefault[x.name]
-      
-    @createChart(data)
+        data[key].visible = legendDefault[data[key].name]
+
+    console.log 'after sort'
+    console.log data
+
+    result = []
+
+    for key of data
+      result.push data[key]
+
+    @createChart(result)
+
+  onData: (data) ->
+    data = JSON.parse(data.data)
+    @oriData = $.extend(true, {}, data);
+
+    @redraw()
