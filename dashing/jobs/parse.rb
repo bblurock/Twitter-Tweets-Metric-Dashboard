@@ -2,7 +2,6 @@ require 'parse-ruby-client'
 require 'json'
 require 'rest-client'
 require 'pp'
-require 'get_process_mem'
 
 ENV['TZ']='UTC'
 
@@ -265,8 +264,6 @@ def sendParseDataset
 
     # Get Data from Parse.com, we provides a block which calculate the fetched data on the fly
     mentionedAndShared = getTimelineData(client, "metioning_history") { |tweets|
-     
-      puts mem = GetProcessMem.new.inspect
       metrics = Hash.new
       
       metrics["mentioned"] = claculateMentioned(tweets)
