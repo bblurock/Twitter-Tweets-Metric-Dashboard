@@ -2,6 +2,7 @@ require 'parse-ruby-client'
 require 'json'
 require 'rest-client'
 require 'pp'
+require 'get_process_mem'
 
 ENV['TZ']='UTC'
 
@@ -85,12 +86,17 @@ def getTimelineData(client, table)
           q.limit = 1000
 
           if maxCreatedAtTime != 0
+              pp maxCreatedAtTime
               q.less_than("createdAt", maxCreatedAtTime)
           end
       end.get
       
       if page.length != 0
         maxCreatedAtTime = page[page.length - 1]["createdAt"]
+
+        pp page[page.length - 1]["createdAt"]
+        pp page[page.length - 2]["createdAt"]
+        pp page[page.length - 3]["createdAt"]
       end
       
       # Blocks given means we should do the calculation on the fly when getting data from Parse.com
@@ -103,7 +109,10 @@ def getTimelineData(client, table)
         # Merge the new calculted shared data into the old one
         mergeMetrics("shared", metrics, pageMetrics);
         # Merge the new calculted mentioned data into the old one
-        mergeMetrics("mentioned", metrics, pageMetrics);        
+        mergeMetrics("mentioned", metrics, pageMetrics);
+        
+        # Reset
+        pageMetrics = Hash.new
       else
         # If No Calculation Needs to be done
         result += page
@@ -255,7 +264,9 @@ def sendParseDataset
     mentionedAndShared = Hash.new
 
     # Get Data from Parse.com, we provides a block which calculate the fetched data on the fly
-    mentionedAndShared = getTimelineData(client, "metioning_history") { |tweets| 
+    mentionedAndShared = getTimelineData(client, "metioning_history") { |tweets|
+     
+      puts mem = GetProcessMem.new.inspect
       metrics = Hash.new
       
       metrics["mentioned"] = claculateMentioned(tweets)
@@ -268,6 +279,7 @@ def sendParseDataset
     mentionedAndShared["mentioned"] = groupeHashIntoKeyData(mentionedAndShared["mentioned"]);
     mentionedAndShared["mentioned"].sort! {|x, y| x['name']<=>y['name']}
     send_event('mentioned', { data: mentionedAndShared["mentioned"].to_json })
+    send_event('accummentioned', { data: mentionedAndShared["mentioned"].to_json })
     
     # Reset
     mentionedAndShared["mentioned"] = Hash.new
@@ -276,6 +288,7 @@ def sendParseDataset
     mentionedAndShared["shared"] = groupeHashIntoKeyData(mentionedAndShared["shared"]);
     mentionedAndShared["shared"].sort! {|x, y| x['name']<=>y['name']}
     send_event('shared', { data: mentionedAndShared["shared"].to_json })
+    send_event('accumshared', { data: mentionedAndShared["shared"].to_json })
     
     # Reset
     mentionedAndShared["shared"] = Hash.new
@@ -359,6 +372,6 @@ def sendParseDataset
     timeline = Array.new
 end
 
-SCHEDULER.every '60s', :first_in => 0 do |job|
+SCHEDULER.every '300s', :first_in => 0 do |job|
     sendParseDataset
 end
