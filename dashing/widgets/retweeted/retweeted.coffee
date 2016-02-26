@@ -29,7 +29,7 @@ class Dashing.Retweeted extends Dashing.Widget
             localStorage.setItem(@name, (if @visible then 'true' else 'false'))
 
             # Sync every graph
-            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited')
+            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited, #accumshared, #accummentioned')
             chart.each ->
               c = $(@).highcharts()
               if c.series[index].visible then c.series[index].hide() else c.series[index].show()
