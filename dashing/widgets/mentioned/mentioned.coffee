@@ -4,7 +4,6 @@ class Dashing.Mentioned extends Dashing.Widget
     $('#mentioned').highcharts 'StockChart',
       title: text: 'Daily Mentioned Count'
       legend: enabled: true
-      # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true
@@ -30,7 +29,7 @@ class Dashing.Mentioned extends Dashing.Widget
             localStorage.setItem(@name, (if @visible then 'true' else 'false'))
 
             # Sync every graph
-            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited')
+            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited, #accumshared, #accummentioned')
             chart.each ->
               c = $(@).highcharts()
               if c.series[index].visible then c.series[index].hide() else c.series[index].show()

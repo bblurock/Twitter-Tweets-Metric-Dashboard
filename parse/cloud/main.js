@@ -8,6 +8,12 @@ if (typeof Parse === 'undefined') {
     Parse.initialize(process.env.PARSE_APPLICATION_ID, process.env.PARSE_JAVASCRIPT_KEY, process.env.PARSE_MASTER_KEY);
 }
 
+/**
+ * Twitter Object constructor.
+ *
+ * @param params
+ * @constructor
+ */
 var Twitter = function (params) {
 
     this.tableName = params.tableName;
@@ -38,6 +44,7 @@ var Twitter = function (params) {
         tokenSecret: this.tokenSecret
     };
 
+    // Metrics counter
     this.counters = {
         totalTweets: 0,
         totalFavorited: 0,
@@ -63,6 +70,7 @@ var Twitter = function (params) {
 
 Twitter.prototype = {
 
+    // Implementation of Twitter oauth authentication
     initializeApi: function (url) {
 
         var urlLink = url;
@@ -94,6 +102,16 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * getIncrementSinceId
+     *
+     * since id is a big number in string format, ex: 654328939449848
+     *
+     * we want to make this number add integer 1 and get newer timestring.
+     *
+     * @param sinceId
+     * @returns {string}
+     */
     getIncrementSinceId: function (sinceId) {
 
         var i, currentDigit,
@@ -131,6 +149,17 @@ Twitter.prototype = {
         return sinceId;
     },
 
+
+    /**
+     * getDecrementMaxId
+     *
+     * max id is a big number in string format, ex: 654328939449848
+     *
+     * we want to make this number minus integer 1 and get older timestring.
+     *
+     * @param sinceId
+     * @returns {string}
+     */
     getDecrementMaxId: function (maxIdStr) {
 
         var i, currentDigit,
@@ -168,6 +197,17 @@ Twitter.prototype = {
         return maxIdStr;
     },
 
+    /**
+     * queryUserTimelineApiCallback
+     *
+     * pair function with, `queryUserTimelineApi`, make a recursive call to `queryUserTimelineApi` if more tweets need to be query next.
+     *
+     * @param recordLength
+     * @param nextMaxId
+     * @param screenName
+     * @param promise
+     * @returns {*}
+     */
     queryUserTimelineApiCallback: function (recordLength, nextMaxId, screenName, promise) {
 
         if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
@@ -195,6 +235,16 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * queryUserTimelineApi
+     *
+     * called by performUserTweetsAnalytics, search for tweets by input screenName
+     *
+     * @param maxId
+     * @param screenName
+     * @param promise
+     * @returns {promise}
+     */
     queryUserTimelineApi: function (maxId, screenName, promise) {
 
         var that = this;
@@ -243,6 +293,7 @@ Twitter.prototype = {
 
                 }
 
+                // Search for older tweets
                 if (results.length !== 0) {
                     nextMaxId = that.getDecrementMaxId(results[results.length - 1].id_str);
                 }
@@ -257,6 +308,11 @@ Twitter.prototype = {
         //return promise;
     },
 
+    /**
+     * performUserTweetsAnalytics
+     *
+     * @returns {Promise}
+     */
     performUserTweetsAnalytics: function () {
 
         var that = this;
@@ -284,24 +340,15 @@ Twitter.prototype = {
 
     },
 
-    querySearchApiCallback: function (direction, recordLength, nextMaxId, nextSinceId, screenName, promise) {
-
-        if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
-
-            //console.log("RecordLength: " + recordLength);
-
-            return this.querySearchApi(direction, nextMaxId, nextSinceId, screenName, promise);
-        }
-        else {
-
-            console.log("RecordLength: " + this.counters.totalTweets);
-
-            //console.log((new Date().getTime() / 1000) + " " + JSON.stringify(this.data[screenName]));
-
-            promise.resolve();
-        }
-    },
-
+    /**
+     * getFormatedMention
+     *
+     * get populated data of mention object
+     *
+     * @param data
+     * @param name
+     * @returns {*}
+     */
     getFormatedMention: function (data, name) {
 
         var mentioningPrototype = Parse.Object.extend(this.mentionsTable);
@@ -334,6 +381,49 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * querySearchApiCallback
+     *
+     * pair with querySearchApi, recursively call querySerchApi if more tweets left. Else resolve promise.
+     *
+     * @param direction
+     * @param recordLength
+     * @param nextMaxId
+     * @param nextSinceId
+     * @param screenName
+     * @param promise
+     * @returns {*|Parse.Promise}
+     */
+    querySearchApiCallback: function (direction, recordLength, nextMaxId, nextSinceId, screenName, promise) {
+
+        if (this.counters.totalTweets <= this.maxQueryTweets && recordLength > 0) {
+
+            //console.log("RecordLength: " + recordLength);
+
+            return this.querySearchApi(direction, nextMaxId, nextSinceId, screenName, promise);
+        }
+        else {
+
+            console.log("RecordLength: " + this.counters.totalTweets);
+
+            //console.log((new Date().getTime() / 1000) + " " + JSON.stringify(this.data[screenName]));
+
+            promise.resolve();
+        }
+    },
+
+    /**
+     * querySearchApi
+     *
+     * search for tweets of particular user(screenName), include_entities means including media information.
+     *
+     * @param direction
+     * @param maxId
+     * @param sinceId
+     * @param screenName
+     * @param promise
+     * @returns {*|Parse.Promise}
+     */
     querySearchApi: function (direction, maxId, sinceId, screenName, promise) {
 
         var that = this;
@@ -485,6 +575,11 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * initDataObject
+     *
+     * @param name
+     */
     initDataObject: function (name) {
 
         this.data[name] = {
@@ -507,6 +602,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * performScreenNamesLookup
+     *
+     * get users' information
+     *
+     * @returns {*}
+     */
     performScreenNamesLookup: function () {
 
         var that = this;
@@ -552,6 +654,11 @@ Twitter.prototype = {
         }); // httpRequest
     },
 
+    /**
+     * savingUserTimelineStatus
+     *
+     * @returns {*}
+     */
     savingUserTimelineStatus: function () {
 
         var that = this;
@@ -611,8 +718,6 @@ Twitter.prototype = {
 
                     console.error(e);
 
-
-
                 });
 
             });
@@ -621,6 +726,13 @@ Twitter.prototype = {
         return promise;
     },
 
+    /**
+     * assignExistedTweetObjectId
+     *
+     * search if tweet existed, if true, assigning parse objectId to it before save.
+     *
+     * @param name
+     */
     assignExistedTweetObjectId: function (name) {
 
         var that = this;
@@ -673,6 +785,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * savingMentionsOnParse
+     *
+     * save all mentioning tweets
+     *
+     * @returns {*}
+     */
     savingMentionsOnParse: function () {
 
         var that = this;
@@ -710,6 +829,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * calculatingMentioning
+     *
+     * count the state of mentioned, replied, shared media metrics of tweets mentioned particular user(screenName)
+     *
+     * @returns {*}
+     */
     calculatingMentioning: function () {
 
         var that = this;
@@ -803,6 +929,15 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * batchSavingRecords
+     *
+     * saving on parse can be tricky since we cannot exceeed the request/sec policy. Thus, we exploit setTimeout method
+     * to sleep through enough time.
+     *
+     * @param data
+     * @returns {*}
+     */
     batchSavingRecords: function (data) {
 
         var that = this;
@@ -879,6 +1014,14 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * queryOlderTweets
+     *
+     * read out the previous tweets
+     *
+     * @param name
+     * @param maxId
+     */
     queryOlderTweets: function(name, maxId)
     {
         var that = this;
@@ -937,6 +1080,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * calculateHistoricalMetrics
+     *
+     * read out historical tweets and perform metrics calculation
+     *
+     * @returns {*}
+     */
     calculateHistoricalMetrics: function()
     {
         var that = this;
@@ -1070,114 +1220,11 @@ Twitter.prototype = {
 
     },
 
-    collectExistedMentioningData: function (name, cratedAt) {
-
-        var that = this;
-
-        var skipStep = 1000;
-
-        var queryCallback = function (length, skip) {
-
-            console.log("In callback: length: " + length + ", skip: " + skip);
-
-            if (length === skipStep) {
-                return doQuery(skip);
-            }
-            else {
-                return Parse.Promise.as();
-            }
-
-        };
-
-        var doQuery = function (skip) {
-            var mentioningPrototype = Parse.Object.extend(that.mentionsTable);
-
-            var query = new Parse.Query(mentioningPrototype);
-
-            var d = new Date(cratedAt);
-            var ts = d.getTime();
-
-            console.log(ts);
-
-            query.lessThanOrEqualTo("createdAt", new Date(ts));
-
-            query.equalTo("mentioning", name);
-
-            query.skip(skip);
-
-            query.limit(skipStep);
-
-            return query.find().then(function (results) {
-
-                for (var i = 0; i < results.length; i++) {
-
-                    that.test.push(results[i]);
-
-                }
-
-                console.log("Current query result: " + results.length);
-
-                skip += results.length;
-
-                return queryCallback(results.length, skip);
-            });
-
-        };
-
-        console.log(cratedAt);
-
-        return doQuery(0);
-
-    },
-
-    eliminateDuplicateMentioningIndex: function () {
-
-        var that = this;
-        var promise = Parse.Promise.as();
-
-        return promise.then(function () {
-
-            return that.collectExistedMentioningData("tickleapp");
-
-        }).then(function () {
-
-            var data = that.mentionedTweets;
-            var existedData = that.test;
-
-            for (var j = 0; j < existedData.length; j++) {
-                for (var i = 0; i < data.length; i++) {
-
-                    if (data[i] === undefined) {
-                        continue;
-                    }
-
-                    if (data[i].get("id_str") == existedData[j].get("id_str")) {
-                        //delete data[i];
-
-                        // We have to store the original data because when we set the ObjectId,
-                        // The parse object will somehow copy the entire object and overwrite our original data
-                        var entities_url_tmp = data[i].get("entities_urls");
-                        var entities_media_tmp = data[i].get("entities_media");
-
-                        data[i].set("objectId", existedData[j].id);
-
-                        data[i].set("entities_urls", entities_url_tmp);
-                        data[i].set("entities_media", entities_media_tmp);
-                    }
-                    else {
-
-                        //console.log(data[i].get("text"));
-
-                    }
-                }
-            }
-
-            return Parse.Promise.as();
-
-        });
-
-    },
-
+    /**
+     * countMentioned
+     *
+     * @param data
+     */
     countMentioned: function (data) {
 
         if (data.get("in_reply_to_status_id") == null && data.get("in_reply_to_user_id") == null) {
@@ -1191,6 +1238,11 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * countReplied
+     *
+     * @param data
+     */
     countReplied: function (data) {
 
         if (data.get("in_reply_to_status_id") || data.get("in_reply_to_user_id")) {
@@ -1199,6 +1251,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * countSharedTwitter
+     *
+     * User upload image or video by twitter.
+     *
+     * @param data
+     */
     countSharedTwitter: function (data) {
 
         // Calculate medias shared with Twitter Webapp
@@ -1213,6 +1272,13 @@ Twitter.prototype = {
 
     },
 
+    /**
+     * countSharedOther
+     *
+     * Other media resource, other than upload using twitter. Including resource like youtube, instagram, vimeo and vine.
+     *
+     * @param data
+     */
     countSharedOther: function (data) {
 
         // Calculate medias shared with other services
@@ -1253,200 +1319,43 @@ Twitter.prototype = {
 
         }
 
-    },
-
-    fetchUserTimelineData: function (name) {
-
-        var that = this;
-
-        var timelinePrototype = Parse.Object.extend(that.timelineTable);
-        var query = new Parse.Query(timelinePrototype);
-
-        var d = new Date("September 29, 2015");
-        var ts = d.getTime();
-
-        query.greaterThanOrEqualTo("createdAt", new Date(ts));
-        query.equalTo("screen_name", name);
-
-        return query.find().then(function (results) {
-
-            var params = {
-                k: 0,
-                name: name
-            };
-
-            var promise = Parse.Promise.as(params);
-
-            for (var i = 0 ; i < results.length ; i++)
-            {
-                promise = promise.then(function (params) {
-
-                    var cratedAt = results[params.k].get("createdAt");
-
-                    // Reset query data
-                    that.test = [];
-
-                    return that.collectExistedMentioningData(name, cratedAt).then(function () {
-
-                        var data = that.test;
-
-                        var timeline = new timelinePrototype;
-
-                        // Reset all counters
-                        for (var key in that.counters) {
-                            that.counters[key] = 0;
-                        }
-
-                        // Copy Timeline Object
-                        timeline.set("objectId", results[params.k].id);
-
-                        console.log(timeline.id);
-
-                        for (var j = 0 ; j < data.length ; j++)
-                        {
-                            if (data[j].get("user_screen_name") != params.name)
-                            {
-                                that.countMentioned(data[j]);
-                                that.countReplied(data[j]);
-                                that.countSharedTwitter(data[j]);
-                                that.countSharedOther(data[j]);
-                            }
-
-                        }
-
-                        timeline.set("mentioned", that.counters.totalMetioned);
-                        timeline.set("original_mentioned", that.counters.totalOriginalMetioned);
-                        timeline.set("replied", that.counters.totalReplied);
-                        timeline.set("shared_twitter", that.counters.totalSharedTwitter);
-                        timeline.set("shared_other", that.counters.totalSharedOther);
-                        timeline.set("original_shared_twitter", that.counters.totalOriginalSharedTwitter);
-                        timeline.set("original_shared_other", that.counters.totalOriginalSharedOther);
-
-                        return timeline.save().then(function () {
-
-                            params.k = params.k + 1;
-
-                            return Parse.Promise.as(params);
-
-                        });
-
-                    });
-
-                });
-
-            }
-
-            return promise;
-        });
-
-    },
-
-    fetchUsersTimelineData: function () {
-
-        var that = this;
-
-        var promise = Parse.Promise.as();
-
-        _.each(that.screenNames, function (screenName) {
-
-            promise = promise.then(function () {
-
-                // Reset all counters
-                for (var key in that.counters) {
-                    that.counters[key] = 0;
-                }
-
-                console.log((new Date().getTime() / 1000) + " ScreenName: " + screenName);
-
-                return that.fetchUserTimelineData(screenName).then(function () {
-                    return Parse.Promise.as();
-                });
-
-            }); // promise
-
-        }); // _.each
-
-        return promise;
-
     }
 
 };
 
-Parse.Cloud.job("printMentioning", function (request, status) {
-
-    Parse.Cloud.useMasterKey();
-
-    var twitterParser = new Twitter(
-        {
-            tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames: ["tickleapp"],
-            //screenNames: ["bblurock"],
-
-            consumerSecret     : request.params.consumerSecret,
-            oauth_consumer_key : request.params.oauth_consumer_key,
-            tokenSecret        : request.params.tokenSecret,
-            oauth_token        : request.params.oauth_token,
-
-            mentionsTable: "metioning_history",
-            timelineTable: "twitter_user_timeline",
-
-            tweetsPerPage: 200,
-            tweetsPerSearchPage: 100,
-            maxQueryTweets: 3200
-        }
-    );
-
-    // Parsing Procedure
-    Parse.Promise.when(
-
-        twitterParser.performScreenNamesLookup()
-
-    ).then(function () {
-
-            return twitterParser.calculatingMentioning()
-
-        });
-
-});
-
-Parse.Cloud.job("updateMiscalculatedData", function (request, status) {
-
-    Parse.Cloud.useMasterKey();
-
-    var twitterParser = new Twitter(
-        {
-            tableName: "user_status",
-            screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-
-            consumerSecret     : request.params.consumerSecret,
-            oauth_consumer_key : request.params.oauth_consumer_key,
-            tokenSecret        : request.params.tokenSecret,
-            oauth_token        : request.params.oauth_token,
-
-            mentionsTable: "metioning_history",
-            timelineTable: "twitter_user_timeline",
-
-            tweetsPerPage: 200,
-            tweetsPerSearchPage: 100,
-            maxQueryTweets: 3200
-        }
-    );
-
-    // Parsing Procedure
-    Parse.Promise.when(
-
-        twitterParser.performScreenNamesLookup()
-
-    ).then(function () {
-
-            return twitterParser.fetchUsersTimelineData();
-
-    });
-
-});
-
-
+/**
+ * JOB: twitterParser
+ *
+ * Parse users' timeline information by selected screen_name. Search users' tweets, performing favorited and retweeted
+ * metrics. Search for mentioning and shared, save tweets on parse database.
+ *
+ * 1. performScreenNamesLookup
+ *    API: https://api.twitter.com/1.1/users/lookup.json?screen_name={$screen_name}
+ *    Purpose: User's information such as followers and tweets count etc..
+ *
+ * 2. performUserTweetsAnalytics
+ *    API: https://api.twitter.com/1.1/statuses/user_timeline.json?include_rts=1&screen_name={$screen_name}
+ *    Purpose: Calculated user's own tweets
+ *
+ * 3. performMentioningSearch
+ *    API: https://api.twitter.com/1.1/search/tweets.json?q=foo
+ *    Purpose: Search for tweets that mentioning current user
+ *
+ * 4. savingMentionsOnParse
+ *    Purpose: Saved the cached tweets on Parse.
+ *
+ * 5. calculatingMentioning
+ *    Purpose: Perform calculation.
+ *
+ * 6. savingUserTimelineStatus
+ *    Purpose: Saving user timeline information.
+ *
+ * 7. updateTweetsObjectId
+ *    Purpose: Update rest of the information such as favorite_count and retweet_count
+ *
+ * 8. batchSavingRecords
+ *    Purpose: Save all the new tweets by the query user(ex: from tickleapp)
+ */
 Parse.Cloud.job("twitterParser", function (request, status) {
 
     Parse.Cloud.useMasterKey();
@@ -1455,16 +1364,19 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
     var twitterParser = new Twitter(
         {
+            // Parse Table name
             tableName: "user_status",
+            mentionsTable: "metioning_history",
+            timelineTable: "twitter_user_timeline",
+
+            // screen_name to process
             screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            
+
+            // NodeJs env setting, may be set in heroku dashboard
             consumerSecret     : process.env.COMSUMER_SECRET,
             oauth_consumer_key : process.env.OAUTH_CONSUMER_KEY,
             tokenSecret        : process.env.TOKEN_SECRET,
             oauth_token        : process.env.OAUTH_TOKEN,
-
-            mentionsTable: "metioning_history",
-            timelineTable: "twitter_user_timeline",
 
             tweetsPerPage: 200,
             tweetsPerSearchPage: 100,
@@ -1531,6 +1443,15 @@ Parse.Cloud.job("twitterParser", function (request, status) {
 
 });
 
+/**
+ * JOB: testParseSave
+ *
+ * Unused Job, mainly the boilerplate of our saving method in Parse.com cloud function. Since we have limited request
+ * per seconds, controlling save request is crucial.
+ *
+ * 'setTimeout' function is actually not functioning on Parse.com, however, we host our Cloud Job on heroku with pure Node.js Env.
+ *
+ */
 Parse.Cloud.job("testParseSave", function (request, status) {
 
     Parse.Cloud.useMasterKey();
@@ -1617,55 +1538,5 @@ Parse.Cloud.job("testParseSave", function (request, status) {
             console.log(JSON.stringify(e));
         }
     );
-
-});
-
-Parse.Cloud.job("parseTweetsFromSearchApi", function (request, status) {
-
-    Parse.Cloud.useMasterKey();
-
-    var twitterParser = new Twitter(
-        {
-            tableName: "user_status",
-            //screenNames: ["tickleapp", "wonderworkshop", "spheroedu", "gotynker", "hopscotch", "codehs", "kodable", "codeorg", "scratch", "trinketapp"],
-            screenNames        : ["trinketapp"],
-
-            consumerSecret     : request.params.consumerSecret,
-            oauth_consumer_key : request.params.oauth_consumer_key,
-            tokenSecret        : request.params.tokenSecret,
-            oauth_token        : request.params.oauth_token,
-
-            mentionsTable: "metioning_history",
-            timelineTable: "twitter_user_timeline",
-
-            tweetsPerPage: 200,
-            tweetsPerSearchPage: 100,
-            maxQueryTweets: 16000
-        }
-    );
-
-    var promise = Parse.Promise.as();
-
-    promise.then(function () {
-
-        return Parse.Promise.when(twitterParser.performMentioningSearch("backward"));
-
-    }).then(function () {
-
-        return Parse.Promise.when(twitterParser.eliminateDuplicateMentioningIndex());
-
-    }).then(function () {
-
-        console.log((new Date().getTime() / 1000) + " Finished savingUserTimelineStatus.");
-
-        return Parse.Promise.when(twitterParser.savingMentionsOnParse());
-
-    }).then(function () {
-
-        console.log((new Date().getTime() / 1000) + " Finished savingMentionsOnParse.");
-
-        status.success("Job Done!");
-
-    });
 
 });

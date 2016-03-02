@@ -2,11 +2,9 @@ class Dashing.Followers extends Dashing.Widget
 
   createChart: (data) ->
     $('#followers').highcharts 'StockChart',
-      # chart: type: 'spline'
       title: text: 'Daily Followers Growth'
       legend: 
         enabled: true
-      # subtitle: text: 'This chart display the new fllowers amount gained by each account'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true
@@ -33,7 +31,7 @@ class Dashing.Followers extends Dashing.Widget
             localStorage.setItem(@name, (if @visible then 'true' else 'false'))
 
             # Sync every graph
-            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited')
+            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited, #accumshared, #accummentioned')
             chart.each ->
               c = $(@).highcharts()
               if c.series[index].visible then c.series[index].hide() else c.series[index].show()

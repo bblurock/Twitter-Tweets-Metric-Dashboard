@@ -4,17 +4,12 @@ class Dashing.Retweeted extends Dashing.Widget
     $('#retweeted').highcharts 'StockChart',
       title: text: 'Daily Retweeted Count'
       legend: enabled: true
-      # subtitle: text: 'This chart display the number of times which their tweets be retweeted by other user. <br/>!! Note: only the most recent 3200 tweets will be counted.'
       rangeSelector:
         selected: 4
         allButtonsEnabled: true
         enable: true
       legend: enabled: true
       yAxis:
-#        min: 500
-#        max: 80000
-#        labels: formatter: ->
-#          (if @value > 0 then ' + ' else '') + @value + '%'
         plotLines: [ {
           value: 0
           width: 1
@@ -34,7 +29,7 @@ class Dashing.Retweeted extends Dashing.Widget
             localStorage.setItem(@name, (if @visible then 'true' else 'false'))
 
             # Sync every graph
-            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited')
+            chart = $('#mentioned, #shared, #retweeted, #followers, #favorited, #accumshared, #accummentioned')
             chart.each ->
               c = $(@).highcharts()
               if c.series[index].visible then c.series[index].hide() else c.series[index].show()
